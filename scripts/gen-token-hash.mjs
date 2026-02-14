@@ -9,18 +9,27 @@
  *   - token (print once)
  *   - token_hash (hex)
  *
- * Hash algorithm: scrypt (Node) with random salt.
- * Store token_hash in DB as: scrypt$saltHex$derivedHex
+ * Hash algorithm: sha256(salt:token:pepper)
+ * Store token_hash in DB as: sha256$saltHex$digestHex
+ *
+ * Pepper:
+ * - Optional.
+ * - If set, it must match the server env var: KAF_TOKEN_PEPPER.
  */
 
 import crypto from 'node:crypto';
 
 const scopes = process.argv[2] || 'export:read';
+const pepper = (process.env.KAF_TOKEN_PEPPER || '').trim();
 
 const token = `kaf_${crypto.randomBytes(24).toString('base64url')}`;
-const salt = crypto.randomBytes(16);
-const derived = crypto.scryptSync(token, salt, 32);
+const saltHex = crypto.randomBytes(16).toString('hex');
 
-const token_hash = `scrypt$${salt.toString('hex')}$${derived.toString('hex')}`;
+const digestHex = crypto
+  .createHash('sha256')
+  .update(`${saltHex}:${token}:${pepper}`)
+  .digest('hex');
+
+const token_hash = `sha256$${saltHex}$${digestHex}`;
 
 console.log(JSON.stringify({ token, token_hash, scopes }, null, 2));
