@@ -19,6 +19,15 @@
 		"binding": "ASSETS",
 		"directory": ".open-next/assets"
 	},
+	
+	// D1 binding (create + wire the DB name/id via wrangler when ready)
+	// "d1_databases": [
+	//   {
+	//     "binding": "DB",
+	//     "database_name": "i18n",
+	//     "database_id": "<uuid>"
+	//   }
+	// ],
 	"images": {
 		// Enable image optimization
 		// see https://opennext.js.org/cloudflare/howtos/image
