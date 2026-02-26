@@ -14,5 +14,5 @@ export function computePlaceholderSig(text: string): string {
   if (mc) tokens.push(...mc.map((t) => t.toLowerCase()));
 
   tokens.sort();
-  return tokens.join('|');
+  return tokens.join("|");
 }

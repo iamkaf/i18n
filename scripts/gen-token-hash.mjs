@@ -17,18 +17,15 @@
  * - If set, it must match the server env var: KAF_TOKEN_PEPPER.
  */
 
-import crypto from 'node:crypto';
+import crypto from "node:crypto";
 
-const scopes = process.argv[2] || 'export:read';
-const pepper = (process.env.KAF_TOKEN_PEPPER || '').trim();
+const scopes = process.argv[2] || "export:read";
+const pepper = (process.env.KAF_TOKEN_PEPPER || "").trim();
 
-const token = `kaf_${crypto.randomBytes(24).toString('base64url')}`;
-const saltHex = crypto.randomBytes(16).toString('hex');
+const token = `kaf_${crypto.randomBytes(24).toString("base64url")}`;
+const saltHex = crypto.randomBytes(16).toString("hex");
 
-const digestHex = crypto
-  .createHash('sha256')
-  .update(`${saltHex}:${token}:${pepper}`)
-  .digest('hex');
+const digestHex = crypto.createHash("sha256").update(`${saltHex}:${token}:${pepper}`).digest("hex");
 
 const token_hash = `sha256$${saltHex}$${digestHex}`;
 

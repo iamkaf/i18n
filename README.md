@@ -30,6 +30,7 @@ This project uses simple Personal Access Tokens (PATs) for machine-to-machine AP
 - Tokens are opaque, generated once, and should be stored securely.
 
 Planned scopes (MVP):
+
 - `catalog:write` — push/update source catalogs (imports)
 - `export:read` — read exports for private projects
 - `moderate:write` — approve/reject suggestions
@@ -39,12 +40,14 @@ Planned scopes (MVP):
 Two ways to bring mods/strings into the atelier:
 
 ### 1) API import (authoritative)
+
 For automation and CI.
 
 - Upsert a project + target (ex: `1.21.11` or `latest`)
 - Upload a source catalog (`en_us` strings + optional context)
 
 ### 2) UI importer (convenience)
+
 For onboarding projects via discovery.
 
 - Uses the Modrinth API to list projects and import metadata.
@@ -57,12 +60,14 @@ Build systems consume approved translations via HTTP:
 - `GET /api/export/<mod>/<target>/<locale>`
 
 Rules:
+
 - Public project → anonymous read allowed
 - Private project → requires `Authorization: Bearer kaf_<token>`
 
 ## Database (D1)
 
 Schema lives in:
+
 - `db/migrations/0001_init.sql`
 - `db/seed.sql`
 

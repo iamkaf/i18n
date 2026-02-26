@@ -1,14 +1,14 @@
-import { getDB } from '@/lib/db';
-import { requireTokenScopes } from '@/lib/auth';
-import { computePlaceholderSig } from '@/lib/placeholders';
+import { getDB } from "@/lib/db";
+import { requireTokenScopes } from "@/lib/auth";
+import { computePlaceholderSig } from "@/lib/placeholders";
 
-export const runtime = 'edge';
+export const runtime = "edge";
 
 type CatalogUpsertPayload = {
   mod: {
     slug: string;
     name: string;
-    visibility?: 'public' | 'private';
+    visibility?: "public" | "private";
     modrinth?: { projectId?: string; slug?: string; iconUrl?: string };
   };
   target: {
@@ -17,7 +17,7 @@ type CatalogUpsertPayload = {
     sourceRevision?: string;
     sourceHash?: string;
   };
-  defaultLocale?: 'en_us';
+  defaultLocale?: "en_us";
   strings: Array<{ key: string; text: string; context?: string }>;
 };
 
@@ -26,21 +26,22 @@ function bad(msg: string, status = 400) {
 }
 
 export async function POST(req: Request) {
-  await requireTokenScopes(req, ['catalog:write']);
+  await requireTokenScopes(req, ["catalog:write"]);
 
   let payload: CatalogUpsertPayload;
   try {
     payload = (await req.json()) as CatalogUpsertPayload;
   } catch {
-    return bad('Invalid JSON');
+    return bad("Invalid JSON");
   }
 
-  if (!payload?.mod?.slug || !payload?.mod?.name) return bad('mod.slug and mod.name are required');
-  if (!payload?.target?.key) return bad('target.key is required');
-  if (!Array.isArray(payload?.strings)) return bad('strings must be an array');
+  if (!payload?.mod?.slug || !payload?.mod?.name) return bad("mod.slug and mod.name are required");
+  if (!payload?.target?.key) return bad("target.key is required");
+  if (!Array.isArray(payload?.strings)) return bad("strings must be an array");
 
-  const visibility = payload.mod.visibility ?? 'private';
-  if (visibility !== 'public' && visibility !== 'private') return bad('mod.visibility must be public|private');
+  const visibility = payload.mod.visibility ?? "private";
+  if (visibility !== "public" && visibility !== "private")
+    return bad("mod.visibility must be public|private");
 
   const db = getDB();
 
@@ -58,7 +59,7 @@ export async function POST(req: Request) {
          modrinth_project_id = COALESCE(excluded.modrinth_project_id, projects.modrinth_project_id),
          modrinth_slug = COALESCE(excluded.modrinth_slug, projects.modrinth_slug),
          icon_url = COALESCE(excluded.icon_url, projects.icon_url),
-         updated_at = excluded.updated_at`
+         updated_at = excluded.updated_at`,
     )
     .bind(
       projectId,
@@ -69,7 +70,7 @@ export async function POST(req: Request) {
       payload.mod.modrinth?.slug ?? null,
       payload.mod.modrinth?.iconUrl ?? null,
       now,
-      now
+      now,
     )
     .run();
 
@@ -78,7 +79,7 @@ export async function POST(req: Request) {
     .bind(payload.mod.slug)
     .first<{ id: string }>();
 
-  if (!proj?.id) return new Response('Failed to upsert project', { status: 500 });
+  if (!proj?.id) return new Response("Failed to upsert project", { status: 500 });
 
   // Upsert target
   const targetId = crypto.randomUUID();
@@ -90,7 +91,7 @@ export async function POST(req: Request) {
          label = excluded.label,
          source_revision = excluded.source_revision,
          source_hash = excluded.source_hash,
-         updated_at = excluded.updated_at`
+         updated_at = excluded.updated_at`,
     )
     .bind(
       targetId,
@@ -100,7 +101,7 @@ export async function POST(req: Request) {
       payload.target.sourceRevision ?? null,
       payload.target.sourceHash ?? null,
       now,
-      now
+      now,
     )
     .run();
 
@@ -109,16 +110,19 @@ export async function POST(req: Request) {
     .bind(proj.id, payload.target.key)
     .first<{ id: string }>();
 
-  if (!tgt?.id) return new Response('Failed to upsert target', { status: 500 });
+  if (!tgt?.id) return new Response("Failed to upsert target", { status: 500 });
 
   // Replace strings for this target:
   // - mark all inactive
   // - upsert incoming keys as active
-  await db.prepare(`UPDATE source_strings SET is_active = 0, updated_at = ? WHERE target_id = ?`).bind(now, tgt.id).run();
+  await db
+    .prepare(`UPDATE source_strings SET is_active = 0, updated_at = ? WHERE target_id = ?`)
+    .bind(now, tgt.id)
+    .run();
 
   const stmts = payload.strings.map((s) => {
     const id = crypto.randomUUID();
-    const sig = computePlaceholderSig(s.text ?? '');
+    const sig = computePlaceholderSig(s.text ?? "");
     return db
       .prepare(
         `INSERT INTO source_strings (id, target_id, string_key, source_text, context, placeholder_sig, is_active, created_at, updated_at)
@@ -128,7 +132,7 @@ export async function POST(req: Request) {
            context = excluded.context,
            placeholder_sig = excluded.placeholder_sig,
            is_active = 1,
-           updated_at = excluded.updated_at`
+           updated_at = excluded.updated_at`,
       )
       .bind(id, tgt.id, s.key, s.text, s.context ?? null, sig, now, now);
   });
@@ -137,5 +141,10 @@ export async function POST(req: Request) {
     await db.batch(stmts);
   }
 
-  return Response.json({ ok: true, project: payload.mod.slug, target: payload.target.key, strings: stmts.length });
+  return Response.json({
+    ok: true,
+    project: payload.mod.slug,
+    target: payload.target.key,
+    strings: stmts.length,
+  });
 }
