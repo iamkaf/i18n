@@ -80,6 +80,28 @@
   --sidebar-accent-foreground: oklch(0.205 0 0);
   --sidebar-border: oklch(0.922 0 0);
   --sidebar-ring: oklch(0.708 0 0);
+
+  /* Atelier design tokens */
+  --atelier-bg: #fffaf0;
+  --atelier-surface: #ffffff;
+  --atelier-surface-soft: #fafaff;
+  --atelier-text: #24243a;
+  --atelier-muted: #6f6f88;
+  --atelier-accent: #24243a;
+  --atelier-accent-foreground: #ffffff;
+  --atelier-accent-strong: #111827;
+  --atelier-highlight: #5865f2;
+  --atelier-success: #059669;
+  --atelier-danger: #e11d48;
+  --atelier-border: #e8e8f5;
+  --atelier-shadow: 0 10px 30px rgba(0, 0, 0, 0.08);
+  --atelier-radius: 1rem;
+  --atelier-radius-lg: 1.5rem;
+  --atelier-space-xs: 0.5rem;
+  --atelier-space-sm: 0.75rem;
+  --atelier-space-md: 1rem;
+  --atelier-space-lg: 1.5rem;
+  --atelier-space-xl: 2rem;
 }
 
 .dark {
@@ -114,6 +136,21 @@
   --sidebar-accent-foreground: oklch(0.985 0 0);
   --sidebar-border: oklch(1 0 0 / 10%);
   --sidebar-ring: oklch(0.556 0 0);
+
+  /* Atelier dark theme tokens */
+  --atelier-bg: #0d0d12;
+  --atelier-surface: #161621;
+  --atelier-surface-soft: #1d1d2c;
+  --atelier-text: #f5f6ff;
+  --atelier-muted: #9a9ab3;
+  --atelier-accent: #f5f6ff;
+  --atelier-accent-foreground: #0d0d12;
+  --atelier-accent-strong: #dfe2ff;
+  --atelier-highlight: #8e9bff;
+  --atelier-success: #34d399;
+  --atelier-danger: #fb7185;
+  --atelier-border: #2d2d42;
+  --atelier-shadow: 0 12px 28px rgba(0, 0, 0, 0.35);
 }
 
 @layer base {
@@ -122,5 +159,39 @@
   }
   body {
     @apply bg-background text-foreground;
+  }
+}
+
+@layer components {
+  .atelier-page {
+    background: var(--atelier-bg);
+    color: var(--atelier-text);
+  }
+
+  .atelier-shell {
+    max-width: 72rem;
+    margin: 0 auto;
+    padding-left: 1.5rem;
+    padding-right: 1.5rem;
+  }
+
+  .atelier-card {
+    background: var(--atelier-surface);
+    border: 1px solid var(--atelier-border);
+    border-radius: var(--atelier-radius-lg);
+    box-shadow: var(--atelier-shadow);
+  }
+
+  .atelier-muted {
+    color: var(--atelier-muted);
+  }
+
+  .atelier-ring {
+    transition: box-shadow 200ms ease;
+  }
+
+  .atelier-ring:focus-visible {
+    outline: none;
+    box-shadow: 0 0 0 3px rgba(88, 101, 242, 0.35);
   }
 }
