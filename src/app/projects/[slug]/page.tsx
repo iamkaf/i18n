@@ -18,7 +18,7 @@ import { ApiError, apiJson, getErrorMessage } from "@/lib/api";
 import { isSupportedLocaleCode, normalizeLocaleCode } from "@/lib/locales";
 import { useSession } from "@/lib/use-session";
 import { cn } from "@/lib/utils";
-import { Settings, ExternalLink } from "lucide-react";
+import { ExternalLink, Loader2, Settings } from "lucide-react";
 
 /* ------------------------------------------------------------------ */
 /*  Types                                                              */
@@ -154,6 +154,7 @@ export default function ProjectPage() {
   /* Strings */
   const [strings, setStrings] = useState<StringItem[]>([]);
   const [loadingStrings, setLoadingStrings] = useState(false);
+  const [hasLoadedStrings, setHasLoadedStrings] = useState(false);
 
   /* Progress */
   const [progress, setProgress] = useState<ProgressItem[]>([]);
@@ -189,6 +190,13 @@ export default function ProjectPage() {
   /* Active locale progress */
   const activeProgress = progress.find((p) => p.locale === locale);
   const coveragePct = activeProgress ? Math.round(activeProgress.coverage * 100) : 0;
+
+  useEffect(() => {
+    setStrings([]);
+    setProgress([]);
+    setSelectedId(null);
+    setHasLoadedStrings(false);
+  }, [slug]);
 
   useEffect(() => {
     const timeoutId = window.setTimeout(() => {
@@ -284,6 +292,7 @@ export default function ProjectPage() {
         const hasActive = nextProgress.some((i) => i.locale === firstPage.locale);
         setProgress(hasActive ? nextProgress : [...nextProgress, { locale: firstPage.locale, approved_count: firstPage.locale === "en_us" ? totalStrings : 0, total_strings: totalStrings, coverage: firstPage.locale === "en_us" && totalStrings > 0 ? 1 : 0 }]);
         setStrings(allStrings);
+        setHasLoadedStrings(true);
       } catch (e) {
         if (!alive) return;
         if (e instanceof ApiError && e.status === 401) { setLocked(true); setStrings([]); }

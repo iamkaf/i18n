@@ -16,7 +16,7 @@ import { Input } from "@/components/ui/input";
 import { ApiError, apiJson, getErrorMessage } from "@/lib/api";
 import { isSupportedLocaleCode, normalizeLocaleCode } from "@/lib/locales";
 import { useSession } from "@/lib/use-session";
-import { ArrowLeft } from "lucide-react";
+import { ArrowLeft, Download } from "lucide-react";
 
 type Project = {
   id: string;
@@ -50,6 +50,13 @@ type ImportResult = {
   ignored_non_string: number;
   skipped_unmatched: Array<{ key: string }>;
   source_path?: string | null;
+};
+
+type ProgressItem = {
+  locale: string;
+  approved_count: number;
+  total_strings: number;
+  coverage: number;
 };
 
 function inferLocaleFromFilename(fileName: string): string {
@@ -86,6 +93,11 @@ export default function ProjectAdminPage() {
   const [lastImport, setLastImport] = useState<ImportResult | null>(null);
   const [uploadFile, setUploadFile] = useState<File | null>(null);
   const [uploadLocale, setUploadLocale] = useState("");
+  const [downloadLocales, setDownloadLocales] = useState<string[]>([]);
+  const [downloadLocale, setDownloadLocale] = useState("en_us");
+  const [downloadBusyLocale, setDownloadBusyLocale] = useState<string | null>(null);
+  const [downloadLocalesBusy, setDownloadLocalesBusy] = useState(false);
+  const [downloadWarning, setDownloadWarning] = useState<string | null>(null);
 
   const sourceFiles = discoveryFiles.filter((f) => f.kind === "source");
   const translationFiles = discoveryFiles.filter((f) => f.kind === "translation");
@@ -142,6 +154,46 @@ export default function ProjectAdminPage() {
     return () => { alive = false; };
   }, [god, project, slug]);
 
+  useEffect(() => {
+    if (!project || !god) return;
+    let alive = true;
+    async function loadDownloadLocales() {
+      setDownloadLocalesBusy(true);
+      setDownloadWarning(null);
+      try {
+        const data = await apiJson<{ progress: ProgressItem[] }>(`/api/projects/${slug}/progress`);
+        if (!alive) return;
+        const localeSet = new Set<string>();
+        for (const item of data.progress ?? []) {
+          const normalized = normalizeLocaleCode(item.locale);
+          if (isSupportedLocaleCode(normalized)) localeSet.add(normalized);
+        }
+        localeSet.add("en_us");
+        const locales = [...localeSet].sort((left, right) => {
+          if (left === "en_us") return -1;
+          if (right === "en_us") return 1;
+          return left.localeCompare(right);
+        });
+        setDownloadLocales(locales);
+      } catch (e) {
+        if (!alive) return;
+        if (e instanceof ApiError && (e.status === 401 || e.status === 403)) return;
+        setDownloadWarning(getErrorMessage(e));
+      } finally {
+        if (alive) setDownloadLocalesBusy(false);
+      }
+    }
+    void loadDownloadLocales();
+    return () => { alive = false; };
+  }, [god, project, slug]);
+
+  useEffect(() => {
+    if (!downloadLocales.length) return;
+    if (!downloadLocales.includes(downloadLocale)) {
+      setDownloadLocale(downloadLocales[0]);
+    }
+  }, [downloadLocale, downloadLocales]);
+
   async function handleProjectSave() {
     if (!project) return;
     setSavingProject(true);
@@ -182,6 +234,34 @@ export default function ProjectAdminPage() {
     if (!isSupportedLocaleCode(resolvedLocale)) { sileo.error({ title: "Locale required" }); return; }
     if (!project?.has_source_catalog && resolvedLocale !== "en_us") { sileo.error({ title: "Import en_us first" }); return; }
     await runImport({ locale: resolvedLocale, source: { type: "upload", file_name: uploadFile.name, content: await uploadFile.text() } });
+  }
+
+  async function handleDownloadExport(rawLocale: string) {
+    if (!project) return;
+    const locale = normalizeLocaleCode(rawLocale);
+    if (!isSupportedLocaleCode(locale)) {
+      sileo.error({ title: "Locale required", description: "Pick a valid locale code." });
+      return;
+    }
+
+    setDownloadBusyLocale(locale);
+    try {
+      const data = await apiJson<Record<string, string>>(`/api/export/${project.slug}/${locale}`);
+      const blob = new Blob([`${JSON.stringify(data, null, 2)}\n`], { type: "application/json" });
+      const blobUrl = URL.createObjectURL(blob);
+      const anchor = document.createElement("a");
+      anchor.href = blobUrl;
+      anchor.download = `${project.slug}.${locale}.json`;
+      document.body.appendChild(anchor);
+      anchor.click();
+      anchor.remove();
+      URL.revokeObjectURL(blobUrl);
+      sileo.success({ title: `Downloaded ${locale}`, description: anchor.download });
+    } catch (e) {
+      sileo.error({ title: "Download failed", description: getErrorMessage(e) });
+    } finally {
+      setDownloadBusyLocale(null);
+    }
   }
 
   if (sessionLoading || loadingProject) return <PublicShell><div className="max-w-6xl mx-auto w-full px-6 md:px-10 py-8"><Spinner /></div></PublicShell>;
@@ -293,6 +373,56 @@ export default function ProjectAdminPage() {
                 <strong><LocaleBadge locale={lastImport.locale} /></strong> ({lastImport.mode}): {summarizeImport(lastImport)}
               </div>
             )}
+          </section>
+
+          {/* Exports */}
+          <section className="bg-[var(--atelier-surface)] rounded-lg border border-[var(--atelier-border)] p-4">
+            <div className="flex items-center justify-between mb-3">
+              <h3 className="text-xs font-semibold uppercase tracking-wider text-[var(--atelier-muted)]">Translation Exports</h3>
+              <span className="text-[11px] text-[var(--atelier-muted)]">JSON with en_us fallback</span>
+            </div>
+
+            {downloadWarning && (
+              <div className="mb-3 p-2.5 rounded-md bg-orange-50 dark:bg-orange-950/30 border border-orange-200 dark:border-orange-900/50 text-xs text-orange-700 dark:text-orange-300">
+                {downloadWarning}
+              </div>
+            )}
+
+            {downloadLocalesBusy ? <Spinner /> : (
+              <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
+                {downloadLocales.length === 0 ? (
+                  <p className="text-xs text-[var(--atelier-muted)] sm:col-span-2 lg:col-span-3">No locales available yet.</p>
+                ) : downloadLocales.map((locale) => (
+                  <Button
+                    key={locale}
+                    type="button"
+                    size="sm"
+                    variant="outline"
+                    className="w-full justify-between text-xs"
+                    onClick={() => void handleDownloadExport(locale)}
+                    disabled={downloadBusyLocale !== null}
+                  >
+                    <span className="inline-flex items-center gap-2">
+                      <LocaleBadge locale={locale} />
+                    </span>
+                    <span className="inline-flex items-center gap-1">
+                      <Download className="w-3.5 h-3.5" />
+                      {downloadBusyLocale === locale ? "Downloading…" : "Download"}
+                    </span>
+                  </Button>
+                ))}
+              </div>
+            )}
+
+            <div className="mt-4 pt-4 border-t border-[var(--atelier-border)]">
+              <div className="text-[11px] font-semibold uppercase tracking-wider text-[var(--atelier-muted)] mb-2">Custom Locale Download</div>
+              <div className="grid gap-3 md:grid-cols-[1fr_160px]">
+                <LocalePicker value={downloadLocale} onChange={setDownloadLocale} placeholder="Locale" allowEmpty className="w-full justify-between" />
+                <Button type="button" size="sm" onClick={() => void handleDownloadExport(downloadLocale)} disabled={downloadBusyLocale !== null}>
+                  {downloadBusyLocale === downloadLocale ? "Downloading…" : "Download JSON"}
+                </Button>
+              </div>
+            </div>
           </section>
         </div>
       </div>
