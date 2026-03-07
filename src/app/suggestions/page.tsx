@@ -11,6 +11,7 @@ import { LocaleCombobox } from "@/components/atelier/locale-combobox";
 import { LockedStateCard } from "@/components/atelier/locked-state-card";
 import { PaginationControls } from "@/components/atelier/pagination-controls";
 import { SectionHeading } from "@/components/atelier/section-heading";
+import { Spinner } from "@/components/atelier/spinner";
 import { StatusPill } from "@/components/atelier/status-pill";
 import { SuggestionDrawer } from "@/components/atelier/suggestion-drawer";
 import { ApiError, apiJson, getErrorMessage } from "@/lib/api";
@@ -54,26 +55,15 @@ export default function SuggestionsPage() {
 
   useEffect(() => {
     if (!user) return;
-
     let alive = true;
     async function loadSuggestions() {
       setBusy(true);
       setError(null);
-      const params = new URLSearchParams({
-        mine: "1",
-        status,
-        page: String(page),
-        limit: "20",
-      });
-      if (locale.trim() && isSupportedLocaleCode(locale)) {
-        params.set("locale", locale.trim().toLowerCase());
-      }
+      const params = new URLSearchParams({ mine: "1", status, page: String(page), limit: "20" });
+      if (locale.trim() && isSupportedLocaleCode(locale)) params.set("locale", locale.trim().toLowerCase());
       if (project.trim()) params.set("project", project.trim());
-
       try {
-        const data = await apiJson<{ suggestions: Suggestion[]; total: number; page: number }>(
-          `/api/suggestions?${params.toString()}`,
-        );
+        const data = await apiJson<{ suggestions: Suggestion[]; total: number; page: number }>(`/api/suggestions?${params.toString()}`);
         if (!alive) return;
         setSuggestions(data.suggestions ?? []);
         setTotal(data.total ?? 0);
@@ -81,23 +71,16 @@ export default function SuggestionsPage() {
         setLimit(20);
       } catch (loadError) {
         if (!alive) return;
-        if (loadError instanceof ApiError && loadError.status === 401) {
-          setSuggestions([]);
-        } else {
-          setError(getErrorMessage(loadError));
-        }
+        if (loadError instanceof ApiError && loadError.status === 401) setSuggestions([]);
+        else setError(getErrorMessage(loadError));
       } finally {
         if (alive) setBusy(false);
       }
     }
-
     void loadSuggestions();
-    return () => {
-      alive = false;
-    };
+    return () => { alive = false; };
   }, [limit, locale, page, project, status, user]);
 
-  // Group suggestions by project_slug
   const grouped = useMemo(() => {
     const map = new Map<string, Suggestion[]>();
     for (const s of suggestions) {
@@ -113,7 +96,7 @@ export default function SuggestionsPage() {
       <SectionHeading title="My Suggestions" />
 
       {loading ? (
-        <div className="bg-[var(--atelier-surface)] rounded-lg border border-[var(--atelier-border)] overflow-hidden animate-pulse h-32" />
+        <Spinner />
       ) : !user ? (
         <LockedStateCard description="Sign in with Discord to view your suggestions." />
       ) : (
@@ -136,27 +119,12 @@ export default function SuggestionsPage() {
                 </button>
               ))}
             </div>
-            <LocaleCombobox
-              value={locale}
-              onChange={(v) => { setLocale(v); setPage(0); }}
-              placeholder="Locale"
-              allowEmpty
-              className="w-28"
-            />
-            <Input
-              value={project}
-              onChange={(e) => { setProject(e.target.value); setPage(0); }}
-              placeholder="Project"
-              className="max-w-[10rem]"
-            />
+            <LocaleCombobox value={locale} onChange={(v) => { setLocale(v); setPage(0); }} placeholder="Locale" allowEmpty className="w-28" />
+            <Input value={project} onChange={(e) => { setProject(e.target.value); setPage(0); }} placeholder="Project" className="max-w-[10rem]" />
           </FilterToolbar>
 
           {busy ? (
-            <div className="space-y-3">
-              {Array.from({ length: 3 }, (_, i) => (
-                <div key={i} className="bg-[var(--atelier-surface)] rounded-lg border border-[var(--atelier-border)] p-3 animate-pulse h-20" />
-              ))}
-            </div>
+            <Spinner />
           ) : error ? (
             <ErrorStateCard description={error} />
           ) : suggestions.length === 0 ? (
@@ -168,55 +136,41 @@ export default function SuggestionsPage() {
               {Array.from(grouped.entries()).map(([slug, items]) => (
                 <section key={slug}>
                   <h3 className="text-xs font-semibold uppercase tracking-wider text-[var(--atelier-muted)] mb-2">{slug}</h3>
-                  <div className="bg-[var(--atelier-surface)] rounded-lg border border-[var(--atelier-border)] overflow-hidden">
-                    {items.map((suggestion) => (
-                      <article key={suggestion.id} className="px-4 py-3 border-b border-[var(--atelier-border)] last:border-0">
-                        <div className="flex items-start justify-between gap-3">
-                          <div className="flex-1 min-w-0">
-                            <div className="flex items-center gap-2 mb-0.5">
-                              <span className="font-mono text-[11px] text-[var(--atelier-highlight)] bg-[var(--atelier-highlight)]/10 px-1.5 py-0.5 rounded">
-                                {suggestion.source_string.key}
-                              </span>
-                              <span className="text-[11px] text-[var(--atelier-muted)]">
-                                <LocaleBadge locale={suggestion.locale} />
-                              </span>
-                            </div>
-                            <p className="text-sm text-[var(--atelier-text)] leading-snug">
-                              {suggestion.source_string.source_text}
-                            </p>
-                          </div>
-                          <div className="flex flex-col items-end gap-1 shrink-0">
-                            <StatusPill
-                              variant={
-                                suggestion.status === "rejected" ? "rejected"
-                                : suggestion.status === "accepted" ? "approved"
-                                : "pending"
-                              }
-                            >
-                              {suggestion.status}
-                            </StatusPill>
-                            {suggestion.status === "pending" && (
-                              <button
-                                type="button"
-                                onClick={() => setEditing(suggestion)}
-                                className="text-xs font-medium text-[var(--atelier-highlight)] hover:underline"
-                              >
-                                Edit
-                              </button>
-                            )}
-                          </div>
-                        </div>
-
-                        <div className="mt-2 bg-[var(--atelier-surface-soft)]/50 rounded-md p-2.5 border border-[var(--atelier-border)]/30 text-sm text-[var(--atelier-text)]">
-                          {suggestion.text}
-                        </div>
-                        {suggestion.decision_note && (
-                          <div className="mt-1.5 text-xs text-[var(--atelier-muted)]">
-                            <strong className="font-medium text-[var(--atelier-text)]">Note:</strong> {suggestion.decision_note}
-                          </div>
-                        )}
-                      </article>
-                    ))}
+                  <div className="bg-[var(--atelier-surface)] rounded-lg border border-[var(--atelier-border)] overflow-x-auto">
+                    <table className="w-full text-sm">
+                      <thead>
+                        <tr className="border-b border-[var(--atelier-border)] text-left text-xs uppercase tracking-wider text-[var(--atelier-muted)]">
+                          <th className="px-4 py-2 font-medium">Key</th>
+                          <th className="px-4 py-2 font-medium">Source</th>
+                          <th className="px-4 py-2 font-medium">Translation</th>
+                          <th className="px-4 py-2 font-medium">Locale</th>
+                          <th className="px-4 py-2 font-medium">Status</th>
+                          <th className="px-4 py-2 font-medium w-16" />
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {items.map((s) => (
+                          <tr key={s.id} className="border-b border-[var(--atelier-border)] last:border-0 hover:bg-black/[0.02] dark:hover:bg-white/[0.02] transition-colors">
+                            <td className="px-4 py-2.5 font-mono text-[11px] text-[var(--atelier-highlight)] whitespace-nowrap">{s.source_string.key}</td>
+                            <td className="px-4 py-2.5 text-[var(--atelier-text)] max-w-[16rem] truncate">{s.source_string.source_text}</td>
+                            <td className="px-4 py-2.5 text-[var(--atelier-text)] max-w-[16rem] truncate">{s.text}</td>
+                            <td className="px-4 py-2.5 whitespace-nowrap"><LocaleBadge locale={s.locale} /></td>
+                            <td className="px-4 py-2.5">
+                              <StatusPill variant={s.status === "rejected" ? "rejected" : s.status === "accepted" ? "approved" : "pending"}>
+                                {s.status}
+                              </StatusPill>
+                            </td>
+                            <td className="px-4 py-2.5">
+                              {s.status === "pending" && (
+                                <button type="button" onClick={() => setEditing(s)} className="text-xs font-medium text-[var(--atelier-highlight)] hover:underline">
+                                  Edit
+                                </button>
+                              )}
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
                   </div>
                 </section>
               ))}
@@ -227,47 +181,25 @@ export default function SuggestionsPage() {
           <SuggestionDrawer
             open={Boolean(editing)}
             title="Edit pending suggestion"
-            description={
-              editing
-                ? `${editing.project_slug} / ${editing.source_string.key}`
-                : undefined
-            }
+            description={editing ? `${editing.project_slug} / ${editing.source_string.key}` : undefined}
             initialLocale={editing?.locale ?? ""}
             initialText={editing?.text ?? ""}
             submitLabel="Save changes"
             onClose={() => setEditing(null)}
             onSubmit={async ({ locale: nextLocale, text }) => {
               if (!editing) return;
-              await apiJson(`/api/suggestions/${editing.id}`, {
-                method: "PATCH",
-                body: JSON.stringify({ locale: nextLocale, text }),
-              });
-              sileo.success({
-                title: "Suggestion updated",
-                description: editing.source_string.key,
-              });
-              setSuggestions((current) =>
-                current.map((item) =>
-                  item.id === editing.id ? { ...item, locale: nextLocale, text } : item,
-                ),
-              );
+              await apiJson(`/api/suggestions/${editing.id}`, { method: "PATCH", body: JSON.stringify({ locale: nextLocale, text }) });
+              sileo.success({ title: "Suggestion updated", description: editing.source_string.key });
+              setSuggestions((c) => c.map((item) => item.id === editing.id ? { ...item, locale: nextLocale, text } : item));
             }}
-            onWithdraw={
-              editing
-                ? async () => {
-                    await apiJson(`/api/suggestions/${editing.id}`, { method: "DELETE" });
-                    sileo.success({
-                      title: "Suggestion withdrawn",
-                      description: editing.source_string.key,
-                    });
-                    setSuggestions((current) => current.filter((item) => item.id !== editing.id));
-                  }
-                : undefined
-            }
+            onWithdraw={editing ? async () => {
+              await apiJson(`/api/suggestions/${editing.id}`, { method: "DELETE" });
+              sileo.success({ title: "Suggestion withdrawn", description: editing.source_string.key });
+              setSuggestions((c) => c.filter((item) => item.id !== editing.id));
+            } : undefined}
           />
         </>
       )}
     </AppShell>
   );
 }
-

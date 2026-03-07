@@ -9,6 +9,7 @@ import { FilterToolbar } from "@/components/atelier/filter-toolbar";
 import { Input } from "@/components/ui/input";
 import { LockedStateCard } from "@/components/atelier/locked-state-card";
 import { SectionHeading } from "@/components/atelier/section-heading";
+import { Spinner } from "@/components/atelier/spinner";
 import { StatusPill } from "@/components/atelier/status-pill";
 import { Button } from "@/components/ui/button";
 import { ApiError, apiJson, getErrorMessage } from "@/lib/api";
@@ -204,17 +205,7 @@ export default function UsersPage() {
           </FilterToolbar>
 
           {busy ? (
-            <div className="bg-[var(--atelier-surface)] rounded-lg border border-[var(--atelier-border)] overflow-hidden animate-pulse">
-               {Array.from({ length: 3 }, (_, i) => (
-                 <div key={i} className="px-4 py-3 border-b border-[var(--atelier-border)] last:border-0 flex items-center gap-3">
-                    <div className="w-9 h-9 rounded-full bg-black/5 dark:bg-white/5" />
-                    <div className="flex-1 space-y-1.5">
-                       <div className="h-3.5 w-28 bg-black/5 dark:bg-white/5 rounded" />
-                       <div className="h-3 w-40 bg-black/5 dark:bg-white/5 rounded" />
-                    </div>
-                 </div>
-               ))}
-            </div>
+            <Spinner />
           ) : error ? (
             <ErrorStateCard description={error} />
           ) : users.length === 0 ? (

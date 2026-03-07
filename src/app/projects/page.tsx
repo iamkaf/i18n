@@ -4,13 +4,13 @@ import Link from "next/link";
 import { useDeferredValue, useEffect, useState } from "react";
 import { PublicShell } from "@/components/atelier/public-shell";
 import { SectionHeading } from "@/components/atelier/section-heading";
-import { FeatureCard } from "@/components/atelier/feature-card";
 import { StatusPill } from "@/components/atelier/status-pill";
 import { EmptyStateCard } from "@/components/atelier/empty-state-card";
 import { ErrorStateCard } from "@/components/atelier/error-state-card";
 import { FilterToolbar } from "@/components/atelier/filter-toolbar";
 import { LocaleBadge } from "@/components/atelier/locale-badge";
 import { ModrinthImporter } from "@/components/atelier/modrinth-importer";
+import { Spinner } from "@/components/atelier/spinner";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -65,14 +65,12 @@ export default function ProjectsPage() {
       }
     }
     void run();
-    return () => {
-      alive = false;
-    };
+    return () => { alive = false; };
   }, [deferredQuery]);
 
   return (
     <PublicShell>
-      <div className="max-w-4xl mx-auto w-full px-6 md:px-10 py-8">
+      <div className="max-w-5xl mx-auto w-full px-6 md:px-10 py-8">
         <SectionHeading title="Projects" />
 
         <FilterToolbar>
@@ -82,24 +80,18 @@ export default function ProjectsPage() {
             placeholder="Search projects…"
             className="max-w-xs"
           />
-        </FilterToolbar>
-
-        {god && (
-          <div className="mb-8 flex justify-end -mt-6">
+          {god && (
             <Dialog open={showImporter} onOpenChange={setShowImporter}>
               <DialogTrigger asChild>
-                <Button className="bg-[var(--atelier-surface-soft)] text-[var(--atelier-text)] border border-[var(--atelier-border)] shadow-sm hover:bg-[var(--atelier-bg)]">
-                  <svg className="w-4 h-4 mr-2 opacity-70" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-                  </svg>
-                  Import from Modrinth
+                <Button size="sm" variant="outline" className="shrink-0">
+                  + Import from Modrinth
                 </Button>
               </DialogTrigger>
               <DialogContent className="max-w-[95vw] sm:max-w-4xl max-h-[90vh] overflow-y-auto bg-[var(--atelier-bg)]/95 backdrop-blur-2xl border-[var(--atelier-border)] shadow-2xl p-0 gap-0">
                 <DialogHeader className="p-6 pb-4 border-b border-[var(--atelier-border)]/50 bg-[var(--atelier-surface-soft)]/50 sticky top-0 z-10 backdrop-blur-xl">
                   <DialogTitle className="text-xl font-semibold tracking-tight">Import Modrinth Project</DialogTitle>
                   <DialogDescription className="text-[var(--atelier-muted)] text-[15px]">
-                    Create a new local shell from Modrinth metadata. Source strings won't be modified here.
+                    Create a new local shell from Modrinth metadata.
                   </DialogDescription>
                 </DialogHeader>
                 <div className="p-6 bg-[var(--atelier-bg)] relative z-0">
@@ -107,65 +99,79 @@ export default function ProjectsPage() {
                 </div>
               </DialogContent>
             </Dialog>
-          </div>
-        )}
+          )}
+        </FilterToolbar>
 
         {loading ? (
-          <div className="bg-[var(--atelier-surface)] rounded-lg border border-[var(--atelier-border)] overflow-hidden animate-pulse">
-            {Array.from({ length: 4 }, (_, i) => (
-              <div key={i} className="px-4 py-3 border-b border-[var(--atelier-border)] last:border-0 flex items-center gap-3">
-                 <div className="w-9 h-9 rounded-lg bg-black/5 dark:bg-white/5" />
-                 <div className="flex-1 space-y-1.5">
-                   <div className="h-3.5 w-28 bg-black/5 dark:bg-white/5 rounded" />
-                   <div className="h-3 w-40 bg-black/5 dark:bg-white/5 rounded" />
-                 </div>
-              </div>
-            ))}
-          </div>
+          <Spinner />
         ) : error ? (
           <ErrorStateCard description={error} />
         ) : projects.length === 0 ? (
-          <div className="flex flex-col items-center justify-center py-12 px-4 text-center">
-            <h3 className="text-sm font-medium text-[var(--atelier-text)] mb-1">No projects found</h3>
-            <p className="text-sm text-[var(--atelier-muted)]">Try a broader search.</p>
+          <div className="py-12 text-center">
+            <p className="text-sm text-[var(--atelier-muted)]">No projects found.</p>
           </div>
         ) : (
-          <div className="bg-[var(--atelier-surface)] rounded-lg border border-[var(--atelier-border)] overflow-hidden">
+          <div className="grid gap-4 grid-cols-1 md:grid-cols-2 lg:grid-cols-3">
             {projects.map((project) => (
-              <Link key={project.id} href={`/projects/${project.slug}`} className="block group border-b border-[var(--atelier-border)] last:border-0 hover:bg-black/[0.03] dark:hover:bg-white/[0.03] transition-colors">
-                 <div className="px-4 py-3 flex items-center justify-between gap-3">
-                    <div className="flex items-center gap-3 flex-1 min-w-0">
-                       <div className="w-9 h-9 shrink-0 bg-gradient-to-tr from-[var(--atelier-highlight)] to-indigo-500 rounded-lg flex items-center justify-center text-white font-semibold text-sm">
-                         {project.icon_url ? (
-                           <img src={project.icon_url} alt="" className="w-full h-full object-cover rounded-lg" />
-                         ) : (
-                           project.name.charAt(0)
-                         )}
-                       </div>
-                       <div className="min-w-0">
-                         <h3 className="text-sm font-medium text-[var(--atelier-text)] flex items-center gap-1.5 truncate">
-                           {project.name}
-                           {project.visibility === "private" && (
-                              <svg className="w-3 h-3 text-[var(--atelier-muted)] shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
-                              </svg>
-                           )}
-                         </h3>
-                         <p className="text-xs text-[var(--atelier-muted)]">
-                           {project.source_string_count.toLocaleString()} strings · <LocaleBadge locale={project.default_locale} />
-                         </p>
-                       </div>
+              <Link
+                key={project.id}
+                href={`/projects/${project.slug}`}
+                className="group relative bg-[var(--atelier-surface)] rounded-lg border border-[var(--atelier-border)] overflow-hidden transition-all duration-200 hover:border-[var(--atelier-highlight)]/40 hover:shadow-lg hover:shadow-[var(--atelier-highlight)]/5 hover:-translate-y-0.5"
+              >
+                {/* Gradient accent top edge */}
+                <div className="h-1 w-full bg-gradient-to-r from-[var(--atelier-highlight)] to-indigo-500 opacity-60 group-hover:opacity-100 transition-opacity" />
+
+                <div className="p-4">
+                  {/* Icon + Name */}
+                  <div className="flex items-start gap-3 mb-3">
+                    <div className="w-11 h-11 shrink-0 rounded-lg overflow-hidden border border-[var(--atelier-border)]">
+                      {project.icon_url ? (
+                        <img src={project.icon_url} alt="" className="w-full h-full object-cover" />
+                      ) : (
+                        <div className="w-full h-full bg-gradient-to-tr from-[var(--atelier-highlight)] to-indigo-500 flex items-center justify-center text-white font-bold text-base">
+                          {project.name.charAt(0)}
+                        </div>
+                      )}
                     </div>
-                    
-                    <div className="flex items-center gap-3 shrink-0">
-                       <StatusPill variant={project.has_source_catalog ? "approved" : "pending"}>
-                         {project.has_source_catalog ? "Ready" : "Metadata"}
-                       </StatusPill>
-                       <svg className="w-4 h-4 text-[var(--atelier-muted)] opacity-40 group-hover:opacity-80 transition-opacity" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                       </svg>
+                    <div className="min-w-0 flex-1">
+                      <h3 className="text-sm font-semibold text-[var(--atelier-text)] truncate group-hover:text-[var(--atelier-highlight)] transition-colors">
+                        {project.name}
+                      </h3>
+                      <p className="text-xs text-[var(--atelier-muted)] font-mono truncate">{project.slug}</p>
                     </div>
-                 </div>
+                  </div>
+
+                  {/* Stats */}
+                  <div className="flex items-center justify-between gap-2">
+                    <div className="flex items-center gap-2 text-xs text-[var(--atelier-muted)]">
+                      <span className="font-medium text-[var(--atelier-text)]">{project.source_string_count.toLocaleString()}</span>
+                      <span>strings</span>
+                      <span className="opacity-40">·</span>
+                      <LocaleBadge locale={project.default_locale} />
+                    </div>
+                    <StatusPill variant={project.has_source_catalog ? "approved" : "pending"}>
+                      {project.has_source_catalog ? "Ready" : "Setup"}
+                    </StatusPill>
+                  </div>
+
+                  {/* External links row */}
+                  {(project.modrinth_slug || project.github_repo_url) && (
+                    <div className="mt-3 pt-3 border-t border-[var(--atelier-border)]/50 flex items-center gap-3 text-xs text-[var(--atelier-muted)]">
+                      {project.modrinth_slug && (
+                        <span className="flex items-center gap-1">
+                          <svg className="w-3 h-3" viewBox="0 0 24 24" fill="currentColor"><path d="M12.252.004a11.78 11.768 0 0 0-8.92 3.73 11 11 0 0 0-2.17 3.11 11.37 11.37 0 0 0-1.16 5.169c0 1.42.17 2.48.6 3.8l.02.06a11.83 11.83 0 0 0 5.19 6.35 10.97 10.97 0 0 0 5.17 1.67l.02-.01c.18.01.36.01.54.01 3.09 0 5.89-1.19 7.99-3.14a11.75 11.75 0 0 0 3.28-5.49 11.4 11.4 0 0 0 .5-2.88v-.08c.01-1.06-.08-2.06-.32-3.09A11.94 11.94 0 0 0 12.252.004z" /><path d="m14.877 16.46-3.028-8.04 7.507 5.71-4.48 2.33z" fill="var(--atelier-bg)" /><path d="m6.59 7.16 3.85 10.22 6.94-3.61-3.03-8.04-3.78 1.47L6.59 7.16z" fill="var(--atelier-bg)" /></svg>
+                          Modrinth
+                        </span>
+                      )}
+                      {project.github_repo_url && (
+                        <span className="flex items-center gap-1">
+                          <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 24 24"><path d="M12 .297c-6.63 0-12 5.373-12 12 0 5.303 3.438 9.8 8.205 11.385.6.113.82-.258.82-.577 0-.285-.01-1.04-.015-2.04-3.338.724-4.042-1.61-4.042-1.61C4.422 18.07 3.633 17.7 3.633 17.7c-1.087-.744.084-.729.084-.729 1.205.084 1.838 1.236 1.838 1.236 1.07 1.835 2.809 1.305 3.495.998.108-.776.417-1.305.76-1.605-2.665-.3-5.466-1.332-5.466-5.93 0-1.31.465-2.38 1.235-3.22-.135-.303-.54-1.523.105-3.176 0 0 1.005-.322 3.3 1.23.96-.267 1.98-.399 3-.405 1.02.006 2.04.138 3 .405 2.28-1.552 3.285-1.23 3.285-1.23.645 1.653.24 2.873.12 3.176.765.84 1.23 1.91 1.23 3.22 0 4.61-2.805 5.625-5.475 5.92.42.36.81 1.096.81 2.22 0 1.606-.015 2.896-.015 3.286 0 .315.21.69.825.57C20.565 22.092 24 17.592 24 12.297c0-6.627-5.373-12-12-12" /></svg>
+                          GitHub
+                        </span>
+                      )}
+                    </div>
+                  )}
+                </div>
               </Link>
             ))}
           </div>
