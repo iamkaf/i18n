@@ -9,7 +9,7 @@ import { EmptyStateCard } from "@/components/atelier/empty-state-card";
 import { ErrorStateCard } from "@/components/atelier/error-state-card";
 import { Input } from "@/components/ui/input";
 import { LocaleBadge } from "@/components/atelier/locale-badge";
-import { LocaleCombobox } from "@/components/atelier/locale-combobox";
+import { LocalePicker } from "@/components/atelier/locale-picker";
 import { LockedStateCard } from "@/components/atelier/locked-state-card";
 import { Spinner } from "@/components/atelier/spinner";
 import { SuggestionDrawer } from "@/components/atelier/suggestion-drawer";
@@ -241,7 +241,15 @@ export default function ProjectPage() {
     try {
       await apiJson<{ ok: true; id: string }>("/api/suggestions", { method: "POST", body: JSON.stringify({ source_string_id: selectedString.id, locale: nextLocale, text }) });
       sileo.success({ title: "Submitted", description: selectedString.string_key });
-      refresh();
+      // Optimistic update — patch the local string to show the pending draft
+      setStrings((prev) =>
+        prev.map((s) =>
+          s.id === selectedString.id
+            ? { ...s, my_suggestion: { id: crypto.randomUUID(), locale: nextLocale, text, status: "pending" as const, created_at: new Date().toISOString() } }
+            : s
+        )
+      );
+      setComposerText("");
     } catch (e) {
       const msg = getErrorMessage(e);
       setComposerError(msg);
@@ -311,11 +319,9 @@ export default function ProjectPage() {
               <>
                 {/* ─── Toolbar ─── */}
                 <div className="flex items-center gap-3 mb-4 flex-wrap">
-                  <LocaleCombobox
+                  <LocalePicker
                     value={locale}
                     onChange={(v) => { setLocale(v); setSelectedId(null); }}
-                    placeholder="Locale"
-                    className="w-32"
                   />
                   <Input
                     value={query}
