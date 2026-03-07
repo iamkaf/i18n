@@ -12,12 +12,12 @@ export function FilterToolbar({
   return (
     <section
       className={cn(
-        "atelier-card mb-6 p-4 md:p-5",
-        sticky && "sticky top-[4.75rem] z-20 backdrop-blur",
+        "bg-[var(--atelier-surface-soft)]/50 backdrop-blur-xl border-y border-[var(--atelier-border)] px-6 py-4 -mx-6 md:-mx-10 mb-8",
+        sticky && "sticky top-0 z-20",
         className,
       )}
     >
-      <div className="flex flex-wrap items-end gap-3">{children}</div>
+      <div className="flex flex-wrap items-end gap-3 max-w-5xl mx-auto">{children}</div>
     </section>
   );
 }

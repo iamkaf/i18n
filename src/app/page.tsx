@@ -1,121 +1,41 @@
-import { AppShell } from "@/components/atelier/app-shell";
-import { HeroSection } from "@/components/atelier/hero-section";
-import { SectionHeading } from "@/components/atelier/section-heading";
-import { FeatureCard } from "@/components/atelier/feature-card";
+import { PublicShell } from "@/components/atelier/public-shell";
 import { StatusPill } from "@/components/atelier/status-pill";
-import { ActionRow } from "@/components/atelier/action-row";
-import { FormField } from "@/components/atelier/form-field";
+import { ChevronRight } from "lucide-react";
 
 export default function Page() {
   return (
-    <AppShell currentHref="/">
-      <HeroSection
-        kicker="Invitation to Kaf's atelier"
-        title="Crowdsourced translations for Kaf's Minecraft mods"
-        subtitle="A focused workshop for contributors and trusted translators. It is not a platform, not a SaaS, and not a general-purpose service."
-        primaryCta={{ href: "/api/auth/discord", label: "Sign in with Discord" }}
-        secondaryCta={{ href: "/projects", label: "Browse projects" }}
-      />
+    <PublicShell>
+      <div className="flex-1 flex flex-col items-center justify-center px-6 py-20 min-h-screen">
+        
+        {/* Animated Hello Message */}
+        <div className="text-center w-full max-w-2xl mx-auto flex flex-col items-center justify-center opacity-0 translate-y-4 animate-[fadeInUp_1.2s_ease-out_forwards]">
+          
+          <h1 className="text-5xl md:text-7xl font-semibold tracking-tight text-[var(--atelier-text)] mb-6" style={{ fontFamily: "var(--font-syne)" }}>
+            Hello.
+          </h1>
+          
+          <p className="text-lg md:text-xl text-[var(--atelier-muted)] max-w-lg mx-auto leading-relaxed font-medium">
+            This is Kaf's Atelier.
+            <br />
+            A quiet space dedicated to translating Minecraft mods into your language.
+          </p>
 
-      <section className="mb-14">
-        <SectionHeading
-          eyebrow="What this atelier does"
-          title="Three practical jobs, no platform sprawl"
-          description="The workflow stays narrow on purpose: suggest, moderate, export."
-        />
-        <div className="grid md:grid-cols-3 gap-4">
-          <FeatureCard title="Suggest translations">
-            Contributors propose locale strings through a simple flow. Discord login keeps identity
-            and accountability clear.
-          </FeatureCard>
-          <FeatureCard title="Moderate with trusted translators">
-            Trusted translators approve or reject suggestions, keeping quality high and history
-            traceable.
-          </FeatureCard>
-          <FeatureCard title="Export approved data">
-            Build systems pull approved translations over HTTP. Public and private project rules are
-            explicit.
-          </FeatureCard>
+          <div className="mt-12 opacity-0 animate-[fadeIn_1s_ease-out_forwards_0.8s]">
+             <a 
+               href="/api/auth/discord" 
+               className="group flex flex-col items-center gap-3 transition-opacity hover:opacity-80"
+             >
+               <div className="w-14 h-14 rounded-full bg-[var(--atelier-surface-soft)] border border-[var(--atelier-border)] flex items-center justify-center shadow-sm">
+                  <svg className="w-6 h-6 text-[var(--atelier-highlight)] group-hover:scale-110 transition-transform duration-300" fill="currentColor" viewBox="0 0 24 24">
+                    <path d="M20.317 4.3698a19.7913 19.7913 0 00-4.8851-1.5152.0741.0741 0 00-.0785.0371c-.211.3753-.4447.8648-.6083 1.2495-1.8447-.2762-3.68-.2762-5.4868 0-.1636-.3933-.4058-.8742-.6177-1.2495a.077.077 0 00-.0785-.037 19.7363 19.7363 0 00-4.8852 1.515.0699.0699 0 00-.0321.0277C.5334 9.0458-.319 13.5799.0992 18.0578a.0824.0824 0 00.0312.0561c2.0528 1.5076 4.0413 2.4228 5.9929 3.0294a.0777.0777 0 00.0842-.0276c.4616-.6304.8731-1.2952 1.226-1.9942a.076.076 0 00-.0416-.1057c-.6528-.2476-1.2743-.5495-1.8722-.8923a.077.077 0 01-.0076-.1277c.1258-.0943.2517-.1923.3718-.2914a.0743.0743 0 01.0776-.0105c3.9278 1.7933 8.18 1.7933 12.0614 0a.0739.0739 0 01.0785.0095c.1202.099.246.1981.3728.2924a.077.077 0 01-.0066.1276 12.2986 12.2986 0 01-1.873.8914.0766.0766 0 00-.0407.1067c.3604.698.7719 1.3628 1.225 1.9932a.076.076 0 00.0842.0286c1.961-.6067 3.9495-1.5219 6.0023-3.0294a.077.077 0 00.0313-.0552c.5004-5.177-.8382-9.6739-3.5485-13.6604a.061.061 0 00-.0312-.0286zM8.02 15.3312c-1.1825 0-2.1569-1.0857-2.1569-2.419 0-1.3332.9555-2.4189 2.157-2.4189 1.2108 0 2.1757 1.0952 2.1568 2.419 0 1.3332-.9555 2.4189-2.1569 2.4189zm7.9748 0c-1.1825 0-2.1569-1.0857-2.1569-2.419 0-1.3332.9554-2.4189 2.1569-2.4189 1.2108 0 2.1757 1.0952 2.1568 2.419 0 1.3332-.946 2.4189-2.1568 2.4189Z" />
+                  </svg>
+               </div>
+               <span className="text-[14px] text-[var(--atelier-highlight)] font-medium">Help translate a mod</span>
+             </a>
+          </div>
         </div>
-      </section>
 
-      <section className="mb-14">
-        <SectionHeading
-          eyebrow="Project visibility"
-          title="Public and private exports"
-          description="The export contract is intentionally simple, with clear access rules."
-        />
-        <div className="grid md:grid-cols-2 gap-4">
-          <FeatureCard title="Public projects">
-            <div className="flex items-center gap-2 mb-3">
-              <StatusPill variant="public">Public</StatusPill>
-              <StatusPill variant="approved">Anonymous export read</StatusPill>
-            </div>
-            Anyone can read approved exports from public projects without a token.
-          </FeatureCard>
-          <FeatureCard title="Private projects">
-            <div className="flex items-center gap-2 mb-3">
-              <StatusPill variant="private">Private</StatusPill>
-              <StatusPill variant="trusted">PAT required</StatusPill>
-            </div>
-            Private exports require `Authorization: Bearer kaf_&lt;token&gt;` using scoped PATs.
-          </FeatureCard>
-        </div>
-      </section>
-
-      <section className="mb-14">
-        <SectionHeading eyebrow="How it works" title="A compact workflow for real mod shipping" />
-        <div className="grid md:grid-cols-3 gap-4">
-          <FeatureCard title="1. Import source catalog">
-            Projects and targets are upserted, then source strings are pushed as authoritative
-            input.
-          </FeatureCard>
-          <FeatureCard title="2. Review and moderation">
-            Suggestions are reviewed by trusted translators, then accepted or rejected with context.
-          </FeatureCard>
-          <FeatureCard title="3. Build consumes export">
-            CI or release tooling reads approved locale data from the export endpoint.
-          </FeatureCard>
-        </div>
-      </section>
-
-      <section className="mb-14">
-        <SectionHeading
-          eyebrow="UI direction"
-          title="Reusable building blocks"
-          description="The site now extends this language into project pages, contributor history, and moderation workbenches."
-        />
-        <div className="grid md:grid-cols-2 gap-4">
-          <FeatureCard title="Status and action language">
-            <div className="flex flex-wrap gap-2 mb-4">
-              <StatusPill variant="pending">pending</StatusPill>
-              <StatusPill variant="approved">approved</StatusPill>
-              <StatusPill variant="trusted">trusted</StatusPill>
-            </div>
-            The same visual language should carry from project browser to moderation queue.
-          </FeatureCard>
-
-          <FeatureCard title="Form and validation style">
-            <div className="grid sm:grid-cols-2 gap-3 mb-3">
-              <FormField label="Locale" placeholder="fr_fr" hint="Use format xx_xx" />
-              <FormField label="Translation" placeholder="Bonjour le monde" hint="Max 500 chars" />
-            </div>
-            Keep forms concise and informative. Avoid hidden behavior and generic enterprise copy.
-          </FeatureCard>
-        </div>
-      </section>
-
-      <section className="atelier-card p-6 md:p-8 mb-10 bg-gradient-to-br from-[#f2f7ff] to-[#eefdf7] dark:from-[#1a1f35] dark:to-[#182b26]">
-        <SectionHeading
-          eyebrow="Non-goals"
-          title="If it doesn't serve the atelier, it doesn't ship"
-          description="No multi-tenant productization, no org-management feature creep, no generic translation-platform ambitions."
-        />
-        <ActionRow
-          primary={{ href: "/api/auth/discord", label: "Enter the atelier" }}
-          secondary={{ href: "/api/health", label: "Check health endpoint" }}
-        />
-      </section>
-    </AppShell>
+      </div>
+    </PublicShell>
   );
 }

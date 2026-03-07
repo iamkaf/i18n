@@ -4,7 +4,7 @@ import Link from "next/link";
 import { sileo } from "sileo";
 import { useDeferredValue, useEffect, useState } from "react";
 import { useParams, useRouter, useSearchParams } from "next/navigation";
-import { AppShell } from "@/components/atelier/app-shell";
+import { PublicShell } from "@/components/atelier/public-shell";
 import { EmptyStateCard } from "@/components/atelier/empty-state-card";
 import { ErrorStateCard } from "@/components/atelier/error-state-card";
 import { FilterToolbar } from "@/components/atelier/filter-toolbar";
@@ -422,12 +422,13 @@ export default function ProjectPage() {
   }
 
   return (
-    <AppShell currentHref="/projects">
-      <SectionHeading
-        eyebrow="Project workbench"
-        title={project?.name || slug}
-        description="Each project keeps one canonical en_us source catalog and approved locale translations layered on top."
-      />
+    <PublicShell>
+      <div className="max-w-5xl mx-auto w-full px-6 md:px-10 py-20 animate-[fadeInUp_0.8s_ease-out_forwards]">
+        <SectionHeading
+          eyebrow="Project workbench"
+          title={project?.name || slug}
+          description="Each project keeps one canonical en_us source catalog and approved locale translations layered on top."
+        />
 
       {loadingProject ? (
         <section className="grid gap-4">
@@ -443,276 +444,299 @@ export default function ProjectPage() {
         />
       ) : project ? (
         <div className="grid gap-6">
-          <section className="atelier-card p-6">
+          <section className="bg-[var(--atelier-surface)] rounded-2xl border border-[var(--atelier-border)] overflow-hidden shadow-sm backdrop-blur-xl p-6">
             <div className="flex flex-wrap items-start justify-between gap-5">
               <div className="flex items-start gap-4">
                 {project.icon_url ? (
                   <img
                     src={project.icon_url}
                     alt=""
-                    className="h-16 w-16 rounded-2xl border border-[var(--atelier-border)] object-cover"
+                    className="h-20 w-20 rounded-2xl border border-[var(--atelier-border)] object-cover shadow-sm"
                   />
-                ) : null}
-                <div>
+                ) : (
+                  <div className="h-20 w-20 rounded-2xl bg-gradient-to-tr from-[var(--atelier-highlight)] to-indigo-500 border border-[var(--atelier-border)] shadow-sm flex items-center justify-center text-white text-3xl font-bold font-syne">
+                     {project.name.charAt(0)}
+                  </div>
+                )}
+                <div className="pt-1">
                   <div className="mb-2 flex flex-wrap items-center gap-2">
                     <StatusPill variant={project.visibility === "public" ? "public" : "private"}>
                       {project.visibility}
                     </StatusPill>
                     <StatusPill variant={project.has_source_catalog ? "approved" : "pending"}>
-                      {project.has_source_catalog ? "source ready" : "metadata only"}
+                      {project.has_source_catalog ? "Ready" : "Metadata"}
                     </StatusPill>
-                    <span className="rounded-full bg-[#f3f4ff] px-2.5 py-1 text-xs text-[#4d4d6a] dark:bg-white/10 dark:text-white/70">
-                      canonical: en_us
+                    <span className="rounded-md bg-[var(--atelier-surface-soft)] border border-[var(--atelier-border)] px-2 py-0.5 text-xs font-mono text-[var(--atelier-muted)]">
+                      en_us
                     </span>
                   </div>
-                  <h1 className="text-3xl font-semibold">{project.name}</h1>
-                  <p className="mt-2 text-sm text-[var(--atelier-muted)]">slug: {project.slug}</p>
-                  {project.modrinth_slug ? (
-                    <p className="mt-1 text-sm text-[var(--atelier-muted)]">
-                      Modrinth:{" "}
-                      <a
-                        href={`https://modrinth.com/mod/${project.modrinth_slug}`}
-                        target="_blank"
-                        rel="noreferrer"
-                        className="text-[var(--atelier-highlight)]"
-                      >
-                        {project.modrinth_slug}
-                      </a>
-                    </p>
-                  ) : null}
+                  <h1 className="text-3xl font-semibold tracking-tight text-[var(--atelier-text)]">{project.name}</h1>
+                  <p className="mt-1 text-sm text-[var(--atelier-muted)] font-mono">{project.slug}</p>
                 </div>
               </div>
-              <div className="text-sm text-[var(--atelier-muted)]">
-                <div>active strings: {project.source_string_count}</div>
-                <div className="mt-1">updated: {new Date(project.updated_at).toLocaleString()}</div>
+              
+              <div className="flex flex-col items-end gap-1 text-sm text-[var(--atelier-muted)] pt-1">
+                <div className="flex items-center gap-2">
+                  <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 10h16M4 14h16M4 18h16" /></svg>
+                  <span>{project.source_string_count.toLocaleString()} strings</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                  <span>{new Date(project.updated_at).toLocaleDateString()}</span>
+                </div>
+                {project.modrinth_slug && (
+                  <a href={`https://modrinth.com/mod/${project.modrinth_slug}`} target="_blank" rel="noreferrer" className="flex items-center gap-2 text-[var(--atelier-highlight)] hover:underline mt-1">
+                     <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" /></svg>
+                     <span>Modrinth</span>
+                  </a>
+                )}
               </div>
             </div>
           </section>
 
           {god ? (
-            <section className="atelier-card p-5">
-              <div>
-                <div className="text-xs uppercase tracking-[0.15em] text-[var(--atelier-muted)]">
-                  Project settings
-                </div>
-                <h3 className="mt-2 text-lg font-semibold">Update local project metadata</h3>
+            <details className="group bg-[var(--atelier-surface)] rounded-2xl border border-[var(--atelier-border)] overflow-hidden shadow-sm backdrop-blur-xl">
+              <summary className="p-4 md:p-5 flex items-center justify-between cursor-pointer list-none select-none hover:bg-black/5 dark:hover:bg-white/5 transition-colors">
+                 <div>
+                    <h3 className="text-base font-semibold text-[var(--atelier-text)]">Project metadata</h3>
+                    <p className="text-[13px] text-[var(--atelier-muted)] mt-0.5">Edit slug, visibility, and source connections.</p>
+                 </div>
+                 <div className="bg-[var(--atelier-surface-soft)] border border-[var(--atelier-border)] p-1.5 rounded-full text-[var(--atelier-muted)] group-open:rotate-90 transition-transform">
+                    <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" /></svg>
+                 </div>
+              </summary>
+              <div className="p-5 pt-0 border-t border-[var(--atelier-border)]">
+                 <div className="mt-5 grid gap-4 md:grid-cols-2">
+                   <label className="block">
+                     <span className="mb-1.5 block text-xs uppercase tracking-[0.15em] text-[var(--atelier-muted)]">
+                       Local slug
+                     </span>
+                     <Input value={editSlug} onChange={(event) => setEditSlug(event.target.value)} />
+                   </label>
+                   <label className="block">
+                     <span className="mb-1.5 block text-xs uppercase tracking-[0.15em] text-[var(--atelier-muted)]">
+                       Local name
+                     </span>
+                     <Input value={editName} onChange={(event) => setEditName(event.target.value)} />
+                   </label>
+                   <label className="block">
+                     <span className="mb-1.5 block text-xs uppercase tracking-[0.15em] text-[var(--atelier-muted)]">
+                       Visibility
+                     </span>
+                     <select
+                       value={editVisibility}
+                       onChange={(event) => setEditVisibility(event.target.value as "public" | "private")}
+                       className="atelier-ring h-9 w-full rounded-md border border-[var(--atelier-border)] bg-[var(--atelier-surface-soft)] px-3 text-sm"
+                     >
+                       <option value="private">private</option>
+                       <option value="public">public</option>
+                     </select>
+                   </label>
+                   <label className="block">
+                     <span className="mb-1.5 block text-xs uppercase tracking-[0.15em] text-[var(--atelier-muted)]">
+                       GitHub repo URL
+                     </span>
+                     <Input
+                       value={editGithubRepoUrl}
+                       onChange={(event) => setEditGithubRepoUrl(event.target.value)}
+                       placeholder="https://github.com/iamkaf/amber"
+                     />
+                   </label>
+                 </div>
+                 <div className="mt-6 flex justify-end">
+                   <Button onClick={() => void handleProjectSave()} disabled={savingProject}>
+                     {savingProject ? "Saving..." : "Save changes"}
+                   </Button>
+                 </div>
               </div>
-              <div className="mt-5 grid gap-4 md:grid-cols-2">
-                <label className="block">
-                  <span className="mb-1.5 block text-xs uppercase tracking-[0.15em] text-[var(--atelier-muted)]">
-                    Local slug
-                  </span>
-                  <Input value={editSlug} onChange={(event) => setEditSlug(event.target.value)} />
-                </label>
-                <label className="block">
-                  <span className="mb-1.5 block text-xs uppercase tracking-[0.15em] text-[var(--atelier-muted)]">
-                    Local name
-                  </span>
-                  <Input value={editName} onChange={(event) => setEditName(event.target.value)} />
-                </label>
-                <label className="block">
-                  <span className="mb-1.5 block text-xs uppercase tracking-[0.15em] text-[var(--atelier-muted)]">
-                    Visibility
-                  </span>
-                  <select
-                    value={editVisibility}
-                    onChange={(event) => setEditVisibility(event.target.value as "public" | "private")}
-                    className="atelier-ring h-9 w-full rounded-md border border-[var(--atelier-border)] bg-[var(--atelier-surface-soft)] px-3 text-sm"
-                  >
-                    <option value="private">private</option>
-                    <option value="public">public</option>
-                  </select>
-                </label>
-                <label className="block">
-                  <span className="mb-1.5 block text-xs uppercase tracking-[0.15em] text-[var(--atelier-muted)]">
-                    GitHub repo URL
-                  </span>
-                  <Input
-                    value={editGithubRepoUrl}
-                    onChange={(event) => setEditGithubRepoUrl(event.target.value)}
-                    placeholder="https://github.com/iamkaf/amber"
-                  />
-                </label>
-              </div>
-              <div className="mt-4 flex justify-end">
-                <Button onClick={() => void handleProjectSave()} disabled={savingProject}>
-                  {savingProject ? "Saving..." : "Save project"}
-                </Button>
-              </div>
-            </section>
+            </details>
           ) : null}
 
           {god ? (
-            <section className="atelier-card p-5">
-              <div className="flex flex-wrap items-start justify-between gap-4">
-                <div>
-                  <div className="text-xs uppercase tracking-[0.15em] text-[var(--atelier-muted)]">
-                    Imports
-                  </div>
-                  <h3 className="mt-2 text-lg font-semibold">
-                    {project.has_source_catalog ? "Sync source and translation files" : "Import canonical source first"}
-                  </h3>
-                  <p className="mt-2 text-sm text-[var(--atelier-muted)]">
-                    GitHub discovery looks for files named <code>xx_xx.json</code>. Importing <code>en_us</code> replaces the canonical source catalog immediately. Other locales land directly as approved translations.
-                  </p>
-                </div>
-                {discoveryRepo ? (
-                  <a
-                    href={discoveryRepo.html_url}
-                    target="_blank"
-                    rel="noreferrer"
-                    className="text-sm text-[var(--atelier-highlight)]"
-                  >
-                    {discoveryRepo.owner}/{discoveryRepo.name}
-                  </a>
-                ) : null}
-              </div>
-
-              {discoveryWarning ? (
-                <p className="mt-3 text-sm text-[var(--atelier-muted)]">{discoveryWarning}</p>
-              ) : null}
-
-              {discoveryBusy ? (
-                <div className="mt-5 grid gap-4 md:grid-cols-2">
-                  <div className="h-36 rounded-3xl border border-[var(--atelier-border)] bg-[var(--atelier-surface-soft)] animate-pulse" />
-                  <div className="h-36 rounded-3xl border border-[var(--atelier-border)] bg-[var(--atelier-surface-soft)] animate-pulse" />
-                </div>
-              ) : (
-                <div className="mt-5 grid gap-4 md:grid-cols-2">
-                  <div className="rounded-3xl border border-[var(--atelier-border)] bg-[var(--atelier-surface-soft)] p-4">
-                    <div className="text-xs uppercase tracking-[0.15em] text-[var(--atelier-muted)]">
-                      Source
-                    </div>
-                    {sourceFiles.length === 0 ? (
-                      <p className="mt-3 text-sm text-[var(--atelier-muted)]">
-                        No <code>en_us.json</code> files detected in the linked repository.
-                      </p>
-                    ) : (
-                      <div className="mt-3 grid gap-3">
-                        {sourceFiles.map((file) => (
-                          <div
-                            key={file.path}
-                            className="rounded-2xl border border-[var(--atelier-border)] bg-[var(--atelier-surface)] p-3"
-                          >
-                            <div className="font-mono text-xs text-[var(--atelier-highlight)]">{file.path}</div>
-                            <Button
-                              className="mt-3"
-                              variant="outline"
-                              onClick={() =>
-                                void runImport({
-                                  locale: "en_us",
-                                  source: { type: "github", path: file.path },
-                                })
-                              }
-                              disabled={importBusy}
-                            >
-                              {project.has_source_catalog ? "Sync en_us from GitHub" : "Import en_us from GitHub"}
-                            </Button>
-                          </div>
-                        ))}
-                      </div>
+            <details className="group bg-[var(--atelier-surface)] rounded-2xl border border-[var(--atelier-border)] overflow-hidden shadow-sm backdrop-blur-xl" open={!project.has_source_catalog}>
+              <summary className="p-4 md:p-5 flex items-center justify-between cursor-pointer list-none select-none hover:bg-black/5 dark:hover:bg-white/5 transition-colors">
+                 <div>
+                    <h3 className="text-base font-semibold text-[var(--atelier-text)]">Data Imports</h3>
+                    <p className="text-[13px] text-[var(--atelier-muted)] mt-0.5">Sync source catalogs and translations.</p>
+                 </div>
+                 <div className="flex items-center gap-4">
+                    {!project.has_source_catalog && (
+                       <span className="text-[12px] font-medium text-red-500 bg-red-50 dark:bg-red-500/10 px-2 py-0.5 rounded-md border border-red-200 dark:border-red-500/20">Action Required</span>
                     )}
-                  </div>
-
-                  <div className="rounded-3xl border border-[var(--atelier-border)] bg-[var(--atelier-surface-soft)] p-4">
-                    <div className="text-xs uppercase tracking-[0.15em] text-[var(--atelier-muted)]">
-                      Translations
+                    <div className="bg-[var(--atelier-surface-soft)] border border-[var(--atelier-border)] p-1.5 rounded-full text-[var(--atelier-muted)] group-open:rotate-90 transition-transform">
+                       <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" /></svg>
                     </div>
-                    {!project.has_source_catalog ? (
-                      <p className="mt-3 text-sm text-[var(--atelier-muted)]">
-                        Import <code>en_us</code> first, then project translations like <code>zh_cn</code> become available here.
-                      </p>
-                    ) : translationFiles.length === 0 ? (
-                      <p className="mt-3 text-sm text-[var(--atelier-muted)]">
-                        No translation locale files were detected in the linked repository.
-                      </p>
-                    ) : (
-                      <div className="mt-3 grid gap-3">
-                        {translationFiles.map((file) => (
-                          <div
-                            key={file.path}
-                            className="rounded-2xl border border-[var(--atelier-border)] bg-[var(--atelier-surface)] p-3"
-                          >
-                            <div className="font-mono text-xs text-[var(--atelier-highlight)]">{file.path}</div>
-                            <div className="mt-2 text-sm text-[var(--atelier-muted)]">locale: {file.locale}</div>
-                            <Button
-                              className="mt-3"
-                              variant="outline"
-                              onClick={() =>
-                                void runImport({
-                                  locale: file.locale,
-                                  source: { type: "github", path: file.path },
-                                })
-                              }
-                              disabled={importBusy}
-                            >
-                              Import {file.locale}
-                            </Button>
-                          </div>
-                        ))}
-                      </div>
-                    )}
+                 </div>
+              </summary>
+              <div className="p-5 pt-0 border-t border-[var(--atelier-border)]">
+                <div className="mt-4 flex flex-wrap items-start justify-between gap-4">
+                  <div>
+                    <p className="text-[14px] text-[var(--atelier-text)]">
+                      GitHub discovery looks for files named <code>xx_xx.json</code>. Importing <code>en_us</code> replaces the canonical source catalog immediately. Other locales land directly as approved translations.
+                    </p>
                   </div>
-                </div>
-              )}
-
-              <div className="mt-5 rounded-3xl border border-[var(--atelier-border)] bg-[var(--atelier-surface-soft)] p-4">
-                <div className="text-xs uppercase tracking-[0.15em] text-[var(--atelier-muted)]">
-                  Manual upload
-                </div>
-                <div className="mt-4 grid gap-4 md:grid-cols-[minmax(0,1.4fr)_160px_140px]">
-                  <label className="block">
-                    <span className="mb-1.5 block text-xs uppercase tracking-[0.15em] text-[var(--atelier-muted)]">
-                      JSON file
-                    </span>
-                    <input
-                      type="file"
-                      accept=".json,application/json"
-                      onChange={(event) => {
-                        const nextFile = event.target.files?.[0] ?? null;
-                        setUploadFile(nextFile);
-                        setUploadLocale(nextFile ? inferLocaleFromFilename(nextFile.name) : "");
-                      }}
-                      className="block w-full text-sm text-[var(--atelier-muted)] file:mr-4 file:rounded-xl file:border file:border-[var(--atelier-border)] file:bg-[var(--atelier-surface)] file:px-4 file:py-2 file:text-sm"
-                    />
-                  </label>
-                  <label className="block">
-                    <span className="mb-1.5 block text-xs uppercase tracking-[0.15em] text-[var(--atelier-muted)]">
-                      Locale
-                    </span>
-                    <Input
-                      value={uploadLocale}
-                      onChange={(event) => setUploadLocale(event.target.value.toLowerCase())}
-                      placeholder="zh_cn"
-                    />
-                  </label>
-                  <div className="flex items-end">
-                    <Button className="w-full" onClick={() => void handleManualUpload()} disabled={importBusy}>
-                      {importBusy ? "Importing..." : "Import file"}
-                    </Button>
-                  </div>
-                </div>
-                {!project.has_source_catalog ? (
-                  <p className="mt-3 text-sm text-[var(--atelier-muted)]">
-                    Translation uploads stay disabled in practice until the canonical <code>en_us</code> catalog exists.
-                  </p>
-                ) : null}
-              </div>
-
-              {lastImport ? (
-                <div className="mt-5 rounded-3xl border border-[var(--atelier-border)] bg-[var(--atelier-surface-soft)] p-4 text-sm">
-                  <div className="font-semibold">
-                    Last import: {lastImport.locale} ({lastImport.mode})
-                  </div>
-                  <div className="mt-2 text-[var(--atelier-muted)]">{summarizeImport(lastImport)}</div>
-                  {lastImport.skipped_unmatched.length > 0 ? (
-                    <div className="mt-2 text-[var(--atelier-muted)]">
-                      Skipped unmatched keys: {lastImport.skipped_unmatched.map((item) => item.key).join(", ")}
-                    </div>
+                  {discoveryRepo ? (
+                    <a
+                      href={discoveryRepo.html_url}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="text-sm text-[var(--atelier-highlight)] bg-[var(--atelier-highlight)]/10 px-3 py-1.5 rounded-lg font-medium hover:bg-[var(--atelier-highlight)]/20 transition-colors"
+                    >
+                      {discoveryRepo.owner}/{discoveryRepo.name}
+                    </a>
                   ) : null}
                 </div>
-              ) : null}
-            </section>
+
+                {discoveryWarning ? (
+                  <div className="mt-4 p-3 rounded-xl bg-orange-50 dark:bg-orange-950/30 border border-orange-200 dark:border-orange-900/50 text-[13px] text-orange-700 dark:text-orange-300">
+                     {discoveryWarning}
+                  </div>
+                ) : null}
+
+                {discoveryBusy ? (
+                  <div className="mt-6 grid gap-4 md:grid-cols-2">
+                    <div className="h-32 rounded-xl bg-black/5 dark:bg-white/5 animate-pulse" />
+                    <div className="h-32 rounded-xl bg-black/5 dark:bg-white/5 animate-pulse" />
+                  </div>
+                ) : (
+                  <div className="mt-6 grid gap-4 md:grid-cols-2">
+                    <div className="rounded-xl border border-[var(--atelier-border)] bg-[var(--atelier-surface-soft)]/50 p-4">
+                      <div className="text-[12px] font-semibold uppercase tracking-[0.1em] text-[var(--atelier-muted)] mb-3">
+                        Source
+                      </div>
+                      {sourceFiles.length === 0 ? (
+                        <p className="text-[13px] text-[var(--atelier-muted)]">
+                          No <code>en_us.json</code> files detected in the linked repository.
+                        </p>
+                      ) : (
+                        <div className="grid gap-3">
+                          {sourceFiles.map((file) => (
+                            <div
+                              key={file.path}
+                              className="rounded-lg border border-[var(--atelier-border)] bg-[var(--atelier-surface)] p-3 flex flex-col gap-3"
+                            >
+                              <div className="font-mono text-[12px] text-[var(--atelier-text)] truncate" title={file.path}>{file.path}</div>
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                className="w-full bg-[var(--atelier-surface-soft)]"
+                                onClick={() =>
+                                  void runImport({
+                                    locale: "en_us",
+                                    source: { type: "github", path: file.path },
+                                  })
+                                }
+                                disabled={importBusy}
+                              >
+                                {project.has_source_catalog ? "Sync en_us from GitHub" : "Import en_us now"}
+                              </Button>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+
+                    <div className="rounded-xl border border-[var(--atelier-border)] bg-[var(--atelier-surface-soft)]/50 p-4">
+                      <div className="text-[12px] font-semibold uppercase tracking-[0.1em] text-[var(--atelier-muted)] mb-3">
+                        Translations
+                      </div>
+                      {!project.has_source_catalog ? (
+                        <p className="text-[13px] text-[var(--atelier-muted)]">
+                          Import <code>en_us</code> first.
+                        </p>
+                      ) : translationFiles.length === 0 ? (
+                        <p className="text-[13px] text-[var(--atelier-muted)]">
+                          No translation locale files were detected.
+                        </p>
+                      ) : (
+                        <div className="grid gap-3">
+                          {translationFiles.map((file) => (
+                            <div
+                              key={file.path}
+                              className="rounded-lg border border-[var(--atelier-border)] bg-[var(--atelier-surface)] p-3 flex flex-col gap-3"
+                            >
+                              <div className="font-mono text-[12px] text-[var(--atelier-text)] truncate" title={file.path}>{file.path}</div>
+                              <div className="text-[11px] text-[var(--atelier-muted)] uppercase tracking-wider">{file.locale}</div>
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                className="w-full bg-[var(--atelier-surface-soft)]"
+                                onClick={() =>
+                                  void runImport({
+                                    locale: file.locale,
+                                    source: { type: "github", path: file.path },
+                                  })
+                                }
+                                disabled={importBusy}
+                              >
+                                Import {file.locale}
+                              </Button>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )}
+
+                <div className="mt-6 rounded-xl border border-[var(--atelier-border)] bg-[var(--atelier-surface-soft)]/50 p-4">
+                  <div className="text-[12px] font-semibold uppercase tracking-[0.1em] text-[var(--atelier-muted)] mb-4">
+                    Manual upload
+                  </div>
+                  <div className="grid gap-4 md:grid-cols-[minmax(0,1.4fr)_160px_140px]">
+                    <label className="block">
+                      <span className="mb-1.5 block text-[11px] uppercase tracking-wider text-[var(--atelier-muted)]">
+                        JSON file
+                      </span>
+                      <input
+                        type="file"
+                        accept=".json,application/json"
+                        onChange={(event) => {
+                          const nextFile = event.target.files?.[0] ?? null;
+                          setUploadFile(nextFile);
+                          setUploadLocale(nextFile ? inferLocaleFromFilename(nextFile.name) : "");
+                        }}
+                        className="block w-full text-[13px] text-[var(--atelier-text)] file:mr-3 file:rounded-md file:border file:border-[var(--atelier-border)] file:bg-[var(--atelier-surface)] file:px-3 file:py-1.5 file:text-[13px] file:font-medium file:text-[var(--atelier-text)] hover:file:bg-[var(--atelier-surface-soft)] transition-colors cursor-pointer"
+                      />
+                    </label>
+                    <label className="block">
+                      <span className="mb-1.5 block text-[11px] uppercase tracking-wider text-[var(--atelier-muted)]">
+                        Locale
+                      </span>
+                      <Input
+                        value={uploadLocale}
+                        onChange={(event) => setUploadLocale(event.target.value.toLowerCase())}
+                        placeholder="zh_cn"
+                      />
+                    </label>
+                    <div className="flex items-end">
+                      <Button className="w-full h-[38px]" onClick={() => void handleManualUpload()} disabled={importBusy}>
+                        {importBusy ? "Importing..." : "Upload"}
+                      </Button>
+                    </div>
+                  </div>
+                  {!project.has_source_catalog ? (
+                    <p className="mt-3 text-[12px] text-red-500 dark:text-red-400">
+                      Uploads are disabled until the canonical <code>en_us</code> catalog exists.
+                    </p>
+                  ) : null}
+                </div>
+
+                {lastImport ? (
+                  <div className="mt-4 rounded-xl bg-[var(--atelier-highlight)]/10 border border-[var(--atelier-highlight)]/20 p-4">
+                    <div className="text-[13px] font-semibold text-[var(--atelier-text)]">
+                      Last import: <span className="uppercase text-[var(--atelier-highlight)]">{lastImport.locale}</span> ({lastImport.mode})
+                    </div>
+                    <div className="mt-1 text-[13px] text-[var(--atelier-text)]/80">{summarizeImport(lastImport)}</div>
+                    {lastImport.skipped_unmatched.length > 0 ? (
+                      <div className="mt-3 p-2 rounded bg-black/5 dark:bg-white/5 text-[12px] font-mono text-[var(--atelier-muted)] max-h-24 overflow-y-auto">
+                        Skipped unmatched keys: {lastImport.skipped_unmatched.map((item) => item.key).join(", ")}
+                      </div>
+                    ) : null}
+                  </div>
+                ) : null}
+              </div>
+            </details>
           ) : null}
 
           {!project.has_source_catalog ? (
@@ -910,6 +934,7 @@ export default function ProjectPage() {
           />
         </div>
       ) : null}
-    </AppShell>
+      </div>
+    </PublicShell>
   );
 }

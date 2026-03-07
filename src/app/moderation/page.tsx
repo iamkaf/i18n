@@ -160,87 +160,115 @@ export default function ModerationPage() {
           </FilterToolbar>
 
           {busy ? (
-            <div className="grid gap-4">
-              <div className="atelier-card h-48 animate-pulse" />
-              <div className="atelier-card h-48 animate-pulse" />
+            <div className="bg-[var(--atelier-surface)] rounded-2xl border border-[var(--atelier-border)] overflow-hidden shadow-sm backdrop-blur-xl animate-pulse">
+               {Array.from({ length: 4 }, (_, i) => (
+                 <div key={i} className="p-4 border-b border-[var(--atelier-border)] last:border-0 flex flex-col gap-3">
+                    <div className="flex items-center justify-between">
+                       <div className="h-4 w-24 bg-black/5 dark:bg-white/5 rounded" />
+                       <div className="h-6 w-32 bg-black/5 dark:bg-white/5 rounded-full" />
+                    </div>
+                    <div className="h-5 w-3/4 bg-black/5 dark:bg-white/5 rounded" />
+                    <div className="h-10 w-full bg-black/5 dark:bg-white/5 rounded-xl" />
+                 </div>
+               ))}
             </div>
           ) : error ? (
             <ErrorStateCard description={error} />
           ) : suggestions.length === 0 ? (
-            <EmptyStateCard
-              title="No suggestions in this queue"
-              description="The current filter set is empty."
-            />
+            <div className="flex flex-col items-center justify-center py-20 px-4 text-center">
+              <div className="w-16 h-16 mb-4 rounded-full bg-[var(--atelier-surface)] border border-[var(--atelier-border)] flex items-center justify-center text-[var(--atelier-muted)] opacity-50">
+                 <svg className="w-8 h-8" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M5 13l4 4L19 7" />
+                 </svg>
+              </div>
+              <h3 className="text-lg font-medium text-[var(--atelier-text)] mb-2">Queue is empty</h3>
+              <p className="text-[15px] text-[var(--atelier-muted)] max-w-sm">No suggestions match the current filters.</p>
+            </div>
           ) : (
-            <div className="grid gap-4">
-              {suggestions.map((suggestion) => (
-                <article key={suggestion.id} className="atelier-card p-5">
-                  <div className="flex flex-wrap items-start justify-between gap-4">
-                    <div>
-                      <div className="font-mono text-sm text-[var(--atelier-highlight)]">
-                        {suggestion.source_string.key}
-                      </div>
-                      <h3 className="mt-2 text-base font-semibold">
-                        {suggestion.source_string.source_text}
-                      </h3>
-                      {suggestion.source_string.context ? (
-                        <p className="mt-2 text-sm text-[var(--atelier-muted)]">
-                          context: {suggestion.source_string.context}
-                        </p>
-                      ) : null}
-                    </div>
-                    <div className="flex flex-wrap items-center gap-2">
-                      <StatusPill
-                        variant={
-                          suggestion.status === "rejected"
-                            ? "rejected"
-                            : suggestion.status === "accepted"
-                              ? "approved"
-                              : "pending"
-                        }
-                      >
-                        {suggestion.status}
-                      </StatusPill>
-                      {suggestion.status === "pending" ? (
-                        <>
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            onClick={() => setDecision({ mode: "approve", suggestion })}
-                          >
-                            Approve
-                          </Button>
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            onClick={() => setDecision({ mode: "reject", suggestion })}
-                          >
-                            Reject
-                          </Button>
-                        </>
-                      ) : null}
-                    </div>
-                  </div>
-                  <div className="mt-4 grid gap-3 md:grid-cols-[minmax(0,2fr)_minmax(0,1.2fr)]">
-                    <div className="rounded-2xl border border-[var(--atelier-border)] bg-[var(--atelier-surface-soft)] p-4 text-sm">
-                      {suggestion.text}
-                    </div>
-                    <div className="rounded-2xl border border-[var(--atelier-border)] bg-[var(--atelier-surface-soft)] p-4 text-sm text-[var(--atelier-muted)]">
-                      <div>author: {suggestion.author_name || suggestion.author_discord_id}</div>
-                      <div className="mt-1">locale: {suggestion.locale}</div>
-                      <div className="mt-1">project: {suggestion.project_slug}</div>
-                      <div className="mt-1">
-                        submitted: {new Date(suggestion.created_at).toLocaleString()}
-                      </div>
-                      {suggestion.decision_note ? (
-                        <div className="mt-3 text-[var(--atelier-text)]">
-                          decision: {suggestion.decision_note}
+            <div className="grid gap-6">
+              <div className="bg-[var(--atelier-surface)] rounded-2xl border border-[var(--atelier-border)] overflow-hidden shadow-sm backdrop-blur-xl">
+                {suggestions.map((suggestion) => (
+                  <article key={suggestion.id} className="p-5 border-b border-[var(--atelier-border)] last:border-0 relative">
+                    <div className="flex flex-wrap items-start justify-between gap-4 mb-3">
+                      <div className="flex-1">
+                        <div className="flex items-center gap-2 mb-1">
+                           <span className="font-mono text-[11px] uppercase tracking-wider text-[var(--atelier-highlight)] bg-[var(--atelier-highlight)]/10 px-2 py-0.5 rounded-md">
+                             {suggestion.source_string.key}
+                           </span>
+                           <span className="text-[12px] text-[var(--atelier-muted)] flex items-center gap-1.5">
+                             <span>{suggestion.locale}</span>
+                             <span>•</span>
+                             <span>{suggestion.project_slug}</span>
+                             <span>•</span>
+                             <span className="font-medium text-[var(--atelier-text)]">
+                               {suggestion.author_name || suggestion.author_discord_id}
+                             </span>
+                           </span>
                         </div>
-                      ) : null}
+                        <h3 className="text-[16px] font-medium text-[var(--atelier-text)] leading-snug">
+                          {suggestion.source_string.source_text}
+                        </h3>
+                        {suggestion.source_string.context ? (
+                          <p className="mt-1 text-[13px] text-[var(--atelier-muted)]">
+                            {suggestion.source_string.context}
+                          </p>
+                        ) : null}
+                      </div>
+                      
+                      <div className="flex flex-col items-end gap-2 shrink-0">
+                        <StatusPill
+                          variant={
+                            suggestion.status === "rejected"
+                              ? "rejected"
+                              : suggestion.status === "accepted"
+                                ? "approved"
+                                : "pending"
+                          }
+                        >
+                          {suggestion.status}
+                        </StatusPill>
+                        {suggestion.status === "pending" ? (
+                          <div className="flex items-center gap-1.5 mt-1">
+                            <button
+                              type="button"
+                              className="text-[13px] font-medium px-3 py-1 rounded-md bg-[var(--atelier-bg)] border border-[var(--atelier-border)] text-green-600 dark:text-green-400 hover:bg-green-50 dark:hover:bg-green-500/10 transition-colors"
+                              onClick={() => setDecision({ mode: "approve", suggestion })}
+                            >
+                              Approve
+                            </button>
+                            <button
+                              type="button"
+                              className="text-[13px] font-medium px-3 py-1 rounded-md bg-[var(--atelier-bg)] border border-[var(--atelier-border)] text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-500/10 transition-colors"
+                              onClick={() => setDecision({ mode: "reject", suggestion })}
+                            >
+                              Reject
+                            </button>
+                          </div>
+                        ) : (
+                          <span className="text-[11px] text-[var(--atelier-muted)] uppercase tracking-wider">
+                            {new Date(suggestion.created_at).toLocaleDateString()}
+                          </span>
+                        )}
+                      </div>
                     </div>
-                  </div>
-                </article>
-              ))}
+                    
+                    <div className="bg-[var(--atelier-surface-soft)]/50 rounded-xl p-3 border border-[var(--atelier-border)]/50">
+                       <div className="flex gap-3 items-start">
+                          <div className="w-1.5 h-1.5 rounded-full bg-[var(--atelier-highlight)] mt-2 shrink-0 opacity-50" />
+                          <div className="text-[15px] text-[var(--atelier-text)] leading-relaxed">
+                            {suggestion.text}
+                          </div>
+                       </div>
+                       {suggestion.decision_note ? (
+                         <div className="mt-3 pt-3 border-t border-[var(--atelier-border)]/50 flex gap-2 text-[13px]">
+                            <strong className="text-[var(--atelier-text)] font-medium">Note:</strong>
+                            <span className="text-[var(--atelier-muted)]">{suggestion.decision_note}</span>
+                         </div>
+                       ) : null}
+                    </div>
+                  </article>
+                ))}
+              </div>
               <PaginationControls page={page} limit={limit} total={total} onPageChange={setPage} />
             </div>
           )}

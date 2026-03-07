@@ -81,22 +81,22 @@
   --sidebar-border: oklch(0.922 0 0);
   --sidebar-ring: oklch(0.708 0 0);
 
-  /* Atelier design tokens */
-  --atelier-bg: #fffaf0;
-  --atelier-surface: #ffffff;
-  --atelier-surface-soft: #fafaff;
-  --atelier-text: #24243a;
-  --atelier-muted: #6f6f88;
-  --atelier-accent: #24243a;
+  /* Atelier design tokens - Apple Inspired */
+  --atelier-bg: #fbfbfd;
+  --atelier-surface: rgba(255, 255, 255, 0.75);
+  --atelier-surface-soft: rgba(255, 255, 255, 0.5);
+  --atelier-text: #1d1d1f;
+  --atelier-muted: #86868b;
+  --atelier-accent: #0071e3;
   --atelier-accent-foreground: #ffffff;
-  --atelier-accent-strong: #111827;
-  --atelier-highlight: #5865f2;
-  --atelier-success: #059669;
-  --atelier-danger: #e11d48;
-  --atelier-border: #e8e8f5;
-  --atelier-shadow: 0 10px 30px rgba(0, 0, 0, 0.08);
-  --atelier-radius: 1rem;
-  --atelier-radius-lg: 1.5rem;
+  --atelier-accent-strong: #000000;
+  --atelier-highlight: #0071e3;
+  --atelier-success: #34c759;
+  --atelier-danger: #ff3b30;
+  --atelier-border: rgba(0, 0, 0, 0.08);
+  --atelier-shadow: 0 4px 24px rgba(0, 0, 0, 0.04);
+  --atelier-radius: 14px;
+  --atelier-radius-lg: 24px;
   --atelier-space-xs: 0.5rem;
   --atelier-space-sm: 0.75rem;
   --atelier-space-md: 1rem;
@@ -123,11 +123,6 @@
   --border: oklch(1 0 0 / 10%);
   --input: oklch(1 0 0 / 15%);
   --ring: oklch(0.556 0 0);
-  --chart-1: oklch(0.488 0.243 264.376);
-  --chart-2: oklch(0.696 0.17 162.48);
-  --chart-3: oklch(0.769 0.188 70.08);
-  --chart-4: oklch(0.627 0.265 303.9);
-  --chart-5: oklch(0.645 0.246 16.439);
   --sidebar: oklch(0.205 0 0);
   --sidebar-foreground: oklch(0.985 0 0);
   --sidebar-primary: oklch(0.488 0.243 264.376);
@@ -137,20 +132,20 @@
   --sidebar-border: oklch(1 0 0 / 10%);
   --sidebar-ring: oklch(0.556 0 0);
 
-  /* Atelier dark theme tokens */
-  --atelier-bg: #0d0d12;
-  --atelier-surface: #161621;
-  --atelier-surface-soft: #1d1d2c;
-  --atelier-text: #f5f6ff;
-  --atelier-muted: #9a9ab3;
-  --atelier-accent: #f5f6ff;
-  --atelier-accent-foreground: #0d0d12;
-  --atelier-accent-strong: #dfe2ff;
-  --atelier-highlight: #8e9bff;
-  --atelier-success: #34d399;
-  --atelier-danger: #fb7185;
-  --atelier-border: #2d2d42;
-  --atelier-shadow: 0 12px 28px rgba(0, 0, 0, 0.35);
+  /* Atelier dark theme tokens - Apple Inspired */
+  --atelier-bg: #000000;
+  --atelier-surface: rgba(28, 28, 30, 0.75);
+  --atelier-surface-soft: rgba(28, 28, 30, 0.5);
+  --atelier-text: #f5f5f7;
+  --atelier-muted: #86868b;
+  --atelier-accent: #0a84ff;
+  --atelier-accent-foreground: #ffffff;
+  --atelier-accent-strong: #ffffff;
+  --atelier-highlight: #0a84ff;
+  --atelier-success: #30d158;
+  --atelier-danger: #ff453a;
+  --atelier-border: rgba(255, 255, 255, 0.1);
+  --atelier-shadow: 0 4px 24px rgba(0, 0, 0, 0.4);
 }
 
 @layer base {
@@ -177,9 +172,34 @@
 
   .atelier-card {
     background: var(--atelier-surface);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
     border: 1px solid var(--atelier-border);
     border-radius: var(--atelier-radius-lg);
     box-shadow: var(--atelier-shadow);
+    transition: transform 0.3s cubic-bezier(0.25, 1, 0.5, 1), box-shadow 0.3s cubic-bezier(0.25, 1, 0.5, 1);
+  }
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes fadeInUp {
+  from { opacity: 0; transform: translateY(15px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes fadeInDown {
+  from { opacity: 0; transform: translateY(-15px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+  .atelier-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.08); /* slightly stronger shadow for hover */
+  }
+
+  .dark .atelier-card:hover {
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.6);
   }
 
   .atelier-muted {

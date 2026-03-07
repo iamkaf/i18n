@@ -201,16 +201,31 @@ export default function UsersPage() {
           </FilterToolbar>
 
           {busy ? (
-            <div className="atelier-card h-40 animate-pulse" />
+            <div className="bg-[var(--atelier-surface)] rounded-2xl border border-[var(--atelier-border)] overflow-hidden shadow-sm backdrop-blur-xl animate-pulse">
+               {Array.from({ length: 3 }, (_, i) => (
+                 <div key={i} className="p-4 border-b border-[var(--atelier-border)] last:border-0 flex items-center gap-4">
+                    <div className="w-12 h-12 rounded-full bg-black/5 dark:bg-white/5" />
+                    <div className="flex-1 space-y-2">
+                       <div className="h-4 w-32 bg-black/5 dark:bg-white/5 rounded" />
+                       <div className="h-3 w-48 bg-black/5 dark:bg-white/5 rounded" />
+                    </div>
+                 </div>
+               ))}
+            </div>
           ) : error ? (
             <ErrorStateCard description={error} />
           ) : users.length === 0 ? (
-            <EmptyStateCard
-              title="No elevated users"
-              description="No trusted or god users matched the current filters."
-            />
+            <div className="flex flex-col items-center justify-center py-20 px-4 text-center">
+              <div className="w-16 h-16 mb-4 rounded-full bg-[var(--atelier-surface)] border border-[var(--atelier-border)] flex items-center justify-center text-[var(--atelier-muted)] opacity-50">
+                 <svg className="w-8 h-8" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" />
+                 </svg>
+              </div>
+              <h3 className="text-lg font-medium text-[var(--atelier-text)] mb-2">No elevated users</h3>
+              <p className="text-[15px] text-[var(--atelier-muted)] max-w-sm">No trusted or god users matched the current filters.</p>
+            </div>
           ) : (
-            <div className="grid gap-4">
+            <div className="bg-[var(--atelier-surface)] rounded-2xl border border-[var(--atelier-border)] overflow-hidden shadow-sm backdrop-blur-xl">
               {users.map((entry) => {
                 const isConfiguredGod = entry.discord_id === GOD_DISCORD_ID;
                 const isCurrentUser = user?.sub === entry.discord_id;
@@ -223,121 +238,128 @@ export default function UsersPage() {
                 const handleText = handle ? `@${handle}` : "not set";
 
                 return (
-                  <article key={entry.discord_id} className="atelier-card p-5">
-                    <div className="flex flex-wrap items-start justify-between gap-4">
-                      <div className="flex items-start gap-4">
+                  <article key={entry.discord_id} className="p-4 border-b border-[var(--atelier-border)] last:border-0 flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+                     <div className="flex items-center gap-4 flex-1">
                         {avatarUrl ? (
                           <img
                             src={avatarUrl}
-                            alt={`${displayName} avatar`}
-                            className="mt-0.5 h-14 w-14 rounded-2xl border border-[var(--atelier-border)] object-cover"
+                            alt={`${displayName}`}
+                            className="h-12 w-12 rounded-full border border-[var(--atelier-border)] object-cover shadow-sm"
                           />
                         ) : (
-                          <div className="mt-0.5 flex h-14 w-14 items-center justify-center rounded-2xl border border-[var(--atelier-border)] bg-[var(--atelier-surface-soft)] text-lg font-semibold text-[var(--atelier-muted)]">
+                          <div className="flex h-12 w-12 items-center justify-center rounded-full border border-[var(--atelier-border)] bg-[var(--atelier-surface-soft)] text-lg font-semibold text-[var(--atelier-muted)] shadow-sm">
                             {displayName.charAt(0).toUpperCase()}
                           </div>
                         )}
                         <div>
-                        <div className="font-mono text-sm text-[var(--atelier-highlight)]">
-                          {entry.discord_id}
+                           <h3 className="text-[16px] font-medium text-[var(--atelier-text)] flex items-center gap-2">
+                             {displayName}
+                             {isConfiguredGod && (
+                               <svg className="w-4 h-4 text-[var(--atelier-highlight)]" fill="currentColor" viewBox="0 0 24 24">
+                                  <path d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                               </svg>
+                             )}
+                           </h3>
+                           <div className="text-[13px] text-[var(--atelier-muted)] mt-0.5 flex items-center gap-1.5">
+                             <span>{handleText}</span>
+                             <span>•</span>
+                             <span className="font-mono text-[11px] bg-[var(--atelier-surface-soft)] px-1.5 py-0.5 rounded border border-[var(--atelier-border)]">{entry.discord_id}</span>
+                           </div>
+                           <div className="text-[12px] text-[var(--atelier-muted)]/70 mt-1">
+                             {isConfiguredGod ? "Reserved god account" : `added ${entry.added_at ? new Date(entry.added_at).toLocaleDateString() : ""} by ${entry.added_by_discord_id || "system"}`}
+                           </div>
                         </div>
-                        <h3 className="mt-2 text-base font-semibold">{displayName}</h3>
-                        <div className="mt-1 text-sm text-[var(--atelier-muted)]">
-                          Handle: {handleText}
-                        </div>
-                        <div className="mt-2 text-sm text-[var(--atelier-muted)]">
-                          {isConfiguredGod
-                            ? "Role is reserved in code for the configured Discord account."
-                            : `added by ${entry.added_by_discord_id || "system"}${entry.added_at ? ` on ${new Date(entry.added_at).toLocaleString()}` : ""}`}
-                        </div>
-                        </div>
-                      </div>
-                      <div className="flex items-center gap-2">
+                     </div>
+                     
+                     <div className="flex flex-col items-end gap-3 self-stretch md:self-auto w-full md:w-auto mt-2 md:mt-0 pt-3 border-t md:border-0 border-[var(--atelier-border)]">
                         <StatusPill variant={entry.role === "god" ? "god" : "trusted"}>
                           {entry.role}
                         </StatusPill>
-                      </div>
-                    </div>
-                    {isConfiguredGod ? (
-                      <div className="mt-4 rounded-xl border border-[var(--atelier-border)] bg-[var(--atelier-surface-soft)] px-4 py-3 text-sm text-[var(--atelier-muted)]">
-                        This account is bound to the hardcoded god Discord ID and cannot be edited
-                        or demoted here.
-                      </div>
-                    ) : (
-                      <div className="mt-4 flex flex-wrap items-center gap-3">
-                        <select
-                          aria-label={`Role for ${entry.discord_id}`}
-                          value={entry.role}
-                          onChange={(event) => {
-                            const nextRole = event.target.value as UserRole;
-                            setUsers((current) =>
-                              current.map((currentEntry) =>
-                                currentEntry.discord_id === entry.discord_id
-                                  ? { ...currentEntry, role: nextRole }
-                                  : currentEntry,
-                              ),
-                            );
-                          }}
-                          className="atelier-ring h-9 min-w-[140px] rounded-md border border-[var(--atelier-border)] bg-[var(--atelier-surface-soft)] px-3 text-sm"
-                        >
-                          <option value="trusted">trusted</option>
-                          <option value="god">god</option>
-                        </select>
-                        <Button
-                          variant="outline"
-                          onClick={async () => {
-                            const current = users.find(
-                              (currentEntry) => currentEntry.discord_id === entry.discord_id,
-                            );
-                            if (!current) return;
-                            setSavingId(entry.discord_id);
-                            try {
-                              await apiJson(`/api/users/${entry.discord_id}`, {
-                                method: "PATCH",
-                                body: JSON.stringify({
-                                  display_name: current.display_name,
-                                  discord_handle: current.discord_handle,
-                                  role: current.role,
-                                }),
-                              });
-                              sileo.success({ title: "Role updated", description: entry.discord_id });
-                              await loadUsers();
-                            } catch (saveError) {
-                              sileo.error({
-                                title: "Update failed",
-                                description: getErrorMessage(saveError),
-                              });
-                            } finally {
-                              setSavingId(null);
-                            }
-                          }}
-                          disabled={savingId === entry.discord_id}
-                        >
-                          {savingId === entry.discord_id ? "Saving..." : "Update"}
-                        </Button>
-                        <Button
-                          variant="outline"
-                          onClick={async () => {
-                            setSavingId(entry.discord_id);
-                            try {
-                              await apiJson(`/api/users/${entry.discord_id}`, { method: "DELETE" });
-                              sileo.success({ title: "User demoted", description: entry.discord_id });
-                              await loadUsers();
-                            } catch (saveError) {
-                              sileo.error({
-                                title: "Demotion failed",
-                                description: getErrorMessage(saveError),
-                              });
-                            } finally {
-                              setSavingId(null);
-                            }
-                          }}
-                          disabled={savingId === entry.discord_id}
-                        >
-                          Demote
-                        </Button>
-                      </div>
-                    )}
+                        
+                        {!isConfiguredGod && (
+                          <div className="flex items-center gap-2 mt-1">
+                            <select
+                              aria-label={`Role for ${entry.discord_id}`}
+                              value={entry.role}
+                              onChange={(event) => {
+                                const nextRole = event.target.value as UserRole;
+                                setUsers((current) =>
+                                  current.map((currentEntry) =>
+                                    currentEntry.discord_id === entry.discord_id
+                                      ? { ...currentEntry, role: nextRole }
+                                      : currentEntry,
+                                  ),
+                                );
+                              }}
+                              className="bg-[var(--atelier-surface-soft)] text-[12px] font-medium text-[var(--atelier-text)] border border-[var(--atelier-border)] rounded-md px-2 py-1 outline-none focus:border-[var(--atelier-highlight)]"
+                            >
+                              <option value="trusted">trusted</option>
+                              <option value="god">god</option>
+                            </select>
+                            
+                            <button
+                               title="Save updates"
+                               onClick={async () => {
+                                 const current = users.find(
+                                   (currentEntry) => currentEntry.discord_id === entry.discord_id,
+                                 );
+                                 if (!current) return;
+                                 setSavingId(entry.discord_id);
+                                 try {
+                                   await apiJson(`/api/users/${entry.discord_id}`, {
+                                     method: "PATCH",
+                                     body: JSON.stringify({
+                                       display_name: current.display_name,
+                                       discord_handle: current.discord_handle,
+                                       role: current.role,
+                                     }),
+                                   });
+                                   sileo.success({ title: "Updated", description: entry.discord_id });
+                                   await loadUsers();
+                                 } catch (saveError) {
+                                   sileo.error({
+                                     title: "Update failed",
+                                     description: getErrorMessage(saveError),
+                                   });
+                                 } finally {
+                                   setSavingId(null);
+                                 }
+                               }}
+                               disabled={savingId === entry.discord_id}
+                               className="w-7 h-7 flex items-center justify-center rounded-md bg-[var(--atelier-surface-soft)] border border-[var(--atelier-border)] text-[var(--atelier-muted)] hover:text-[var(--atelier-highlight)] transition-colors disabled:opacity-50"
+                            >
+                               {savingId === entry.discord_id ? (
+                                  <svg className="w-4 h-4 animate-spin" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" className="opacity-25" /><path fill="currentColor" d="M4 12a8 8 0 018-8v8z" className="opacity-75" /></svg>
+                               ) : (
+                                  <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" /></svg>
+                               )}
+                            </button>
+                            
+                            <button
+                               title="Demote User"
+                               onClick={async () => {
+                                 setSavingId(entry.discord_id);
+                                 try {
+                                   await apiJson(`/api/users/${entry.discord_id}`, { method: "DELETE" });
+                                   sileo.success({ title: "Removed", description: entry.discord_id });
+                                   await loadUsers();
+                                 } catch (saveError) {
+                                   sileo.error({
+                                     title: "Demotion failed",
+                                     description: getErrorMessage(saveError),
+                                   });
+                                 } finally {
+                                   setSavingId(null);
+                                 }
+                               }}
+                               disabled={savingId === entry.discord_id}
+                               className="w-7 h-7 flex items-center justify-center rounded-md bg-red-50 dark:bg-red-500/10 border border-red-200 dark:border-red-500/20 text-red-600 dark:text-red-400 hover:bg-red-100 dark:hover:bg-red-500/30 transition-colors disabled:opacity-50"
+                            >
+                               <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
+                            </button>
+                          </div>
+                        )}
+                     </div>
                   </article>
                 );
               })}

@@ -8,13 +8,13 @@ export function SectionHeading({
   description?: string;
 }) {
   return (
-    <div className="mb-5">
+    <div className="mb-8">
       {eyebrow ? (
-        <p className="text-xs uppercase tracking-[0.18em] text-[var(--atelier-muted)]">{eyebrow}</p>
+        <p className="text-[13px] uppercase tracking-[0.18em] font-medium text-[var(--atelier-highlight)] mb-2">{eyebrow}</p>
       ) : null}
-      <h2 className="mt-2 text-2xl md:text-3xl leading-tight font-semibold">{title}</h2>
+      <h2 className="text-3xl md:text-4xl font-bold tracking-tight text-[var(--atelier-text)]">{title}</h2>
       {description ? (
-        <p className="mt-2 text-[var(--atelier-muted)] max-w-2xl">{description}</p>
+        <p className="mt-3 text-[15px] text-[var(--atelier-muted)] max-w-2xl leading-relaxed">{description}</p>
       ) : null}
     </div>
   );

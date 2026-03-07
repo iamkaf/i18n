@@ -6,7 +6,7 @@ import { StatusPill } from "@/components/atelier/status-pill";
 import { useSession } from "@/lib/use-session";
 import { useSessionStore } from "@/lib/store";
 
-export function AuthControls() {
+export function AuthControls({ showDashboardLink = false }: { showDashboardLink?: boolean } = {}) {
   const { user, trusted, god, loading } = useSession();
   const clearSession = useSessionStore((state) => state.clearSession);
   const [busy, setBusy] = React.useState(false);
@@ -44,6 +44,11 @@ export function AuthControls() {
 
   return (
     <div className="flex items-center gap-2">
+      {showDashboardLink && user ? (
+        <Link href="/suggestions" className="atelier-ring rounded-lg border border-[var(--atelier-border)] bg-[var(--atelier-highlight)]/10 px-2.5 py-1.5 text-xs font-medium text-[var(--atelier-highlight)] hover:bg-[var(--atelier-highlight)]/20 transition-colors mr-1">
+          Dashboard
+        </Link>
+      ) : null}
       <div className="flex items-center gap-2 rounded-lg border border-[var(--atelier-border)] bg-[var(--atelier-surface)] px-2.5 py-1.5 text-xs text-[var(--atelier-muted)]">
         {user.avatar ? (
           <img

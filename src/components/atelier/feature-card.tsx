@@ -10,9 +10,9 @@ export function FeatureCard({
   className?: string;
 }) {
   return (
-    <article className={cn("atelier-card p-5 md:p-6", className)}>
-      <h3 className="text-base md:text-lg font-semibold mb-2">{title}</h3>
-      <div className="text-sm md:text-base text-[var(--atelier-muted)] leading-relaxed">
+    <article className={cn("atelier-card flex flex-col p-5 md:p-6 h-full", className)}>
+      <h3 className="text-lg font-semibold tracking-tight text-[var(--atelier-text)] mb-3">{title}</h3>
+      <div className="mt-auto text-[15px] text-[var(--atelier-muted)] leading-relaxed">
         {children}
       </div>
     </article>
