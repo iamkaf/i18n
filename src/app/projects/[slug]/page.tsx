@@ -506,6 +506,26 @@ export default function ProjectPage() {
                             <p className="text-sm text-[var(--atelier-text)] leading-relaxed">{selectedString.source_text}</p>
                           </div>
 
+                          {/* Minecraft Item/Block Tooltip */}
+                          {((["item.", "block.", "creativetab."]).some((prefix) => selectedString.string_key.startsWith(prefix))) && selectedString.string_key.split(".").length === 3 && (
+                            <div>
+                              <div className="text-[11px] uppercase tracking-wider text-[var(--atelier-muted)] mb-2">Tooltip Preview</div>
+                              <div className="inline-block">
+                                <div className="bg-[#100010] border-2 border-[#250058] rounded-sm p-2 shadow-[0_0_0_1px_#5000aa]">
+                                  <div className="text-white text-lg leading-snug drop-shadow-[0_0_2px_rgba(255,255,255,0.5)]" style={{ fontFamily: "var(--font-vt323), monospace" }}>
+                                    {selectedString.has_approved_translation && selectedString.approved_translation !== ""
+                                      ? selectedString.approved_translation
+                                      : selectedString.my_suggestion?.status === "pending" && selectedString.my_suggestion.text !== ""
+                                      ? selectedString.my_suggestion.text
+                                      : composerText !== ""
+                                      ? composerText
+                                      : selectedString.source_text}
+                                  </div>
+                                </div>
+                              </div>
+                            </div>
+                          )}
+
                           {/* Context */}
                           {selectedString.context && (
                             <div>
