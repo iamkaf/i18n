@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { sileo } from "sileo";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useParams, useSearchParams } from "next/navigation";
 import { PublicShell } from "@/components/atelier/public-shell";
 import { EmptyStateCard } from "@/components/atelier/empty-state-card";
@@ -160,6 +160,7 @@ export default function ProjectPage() {
 
   /* Selection + editor */
   const [selectedId, setSelectedId] = useState<string | null>(null);
+  const listItemRefs = useRef(new Map<string, HTMLButtonElement>());
   const [composerText, setComposerText] = useState("");
   const [composerError, setComposerError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
@@ -302,6 +303,13 @@ export default function ProjectPage() {
     setSelectedId(null);
   }, [filteredStrings, loadingStrings, selectedId]);
 
+  useEffect(() => {
+    if (!selectedId) return;
+    if (loadingStrings) return;
+    const selectedListItem = listItemRefs.current.get(selectedId);
+    selectedListItem?.scrollIntoView({ block: "nearest" });
+  }, [filteredStrings, loadingStrings, selectedId]);
+
   /* ---- Sync composer text when selection changes ---- */
   useEffect(() => {
     if (selectedString) {
@@ -374,7 +382,7 @@ export default function ProjectPage() {
             <header className="flex items-center gap-3 mb-6">
               <div className="w-10 h-10 shrink-0 rounded-lg overflow-hidden border border-[var(--atelier-border)]">
                 {project.icon_url ? (
-                  <img src={project.icon_url} alt="" className="w-full h-full object-cover" />
+                  <img src={project.icon_url} alt={`${project.name} icon`} className="w-full h-full object-cover" />
                 ) : (
                   <div className="w-full h-full bg-gradient-to-tr from-[var(--atelier-highlight)] to-indigo-500 flex items-center justify-center text-white font-bold text-sm">
                     {project.name.charAt(0)}
@@ -470,6 +478,10 @@ export default function ProjectPage() {
                             <button
                               key={s.id}
                               type="button"
+                              ref={(node) => {
+                                if (node) listItemRefs.current.set(s.id, node);
+                                else listItemRefs.current.delete(s.id);
+                              }}
                               onClick={() => setSelectedId(s.id)}
                               className={cn(
                                 "w-full flex items-center gap-3 px-4 py-2.5 text-left border-b border-[var(--atelier-border)] last:border-0 transition-colors text-sm",

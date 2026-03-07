@@ -81,7 +81,7 @@ export default function Page() {
           }}
         />
 
-        <main className="relative z-10 px-6 sm:px-8 lg:px-12 pt-16 sm:pt-24 pb-32">
+        <div className="relative z-10 px-6 sm:px-8 lg:px-12 pt-16 sm:pt-24 pb-32">
           <div className="max-w-3xl mx-auto">
             
             {/* Handwritten-style header */}
@@ -181,7 +181,7 @@ export default function Page() {
             </footer>
 
           </div>
-        </main>
+        </div>
       </div>
     </PublicShell>
   );

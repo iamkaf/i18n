@@ -127,7 +127,7 @@ export default function ProjectsPage() {
                   <div className="flex items-start gap-3 mb-3">
                     <div className="w-11 h-11 shrink-0 rounded-lg overflow-hidden border border-[var(--atelier-border)]">
                       {project.icon_url ? (
-                        <img src={project.icon_url} alt="" className="w-full h-full object-cover" />
+                        <img src={project.icon_url} alt={`${project.name} icon`} className="w-full h-full object-cover" />
                       ) : (
                         <div className="w-full h-full bg-gradient-to-tr from-[var(--atelier-highlight)] to-indigo-500 flex items-center justify-center text-white font-bold text-base">
                           {project.name.charAt(0)}
