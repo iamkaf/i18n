@@ -44,7 +44,11 @@ describe("signSession + verifySession", () => {
       false,
       ["sign"],
     );
-    const sig = await crypto.subtle.sign("HMAC", key, new TextEncoder().encode(`${header}.${body}`));
+    const sig = await crypto.subtle.sign(
+      "HMAC",
+      key,
+      new TextEncoder().encode(`${header}.${body}`),
+    );
     const sigB64 = btoa(String.fromCharCode(...new Uint8Array(sig)))
       .replace(/\+/g, "-")
       .replace(/\//g, "_")

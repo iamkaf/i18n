@@ -28,11 +28,7 @@ const PENDING_SUGGESTION = {
   author_discord_id: "999",
 };
 
-async function makeRequest(
-  url: string,
-  session: typeof SESSION | null,
-  init: RequestInit = {},
-) {
+async function makeRequest(url: string, session: typeof SESSION | null, init: RequestInit = {}) {
   const headers = new Headers(init.headers);
   if (session) {
     const token = await signSession(session, SECRET);
@@ -62,11 +58,9 @@ describe("POST /api/suggestions/[id]/approve", () => {
     const { POST } = await import("@/app/api/suggestions/[id]/approve/route");
     // requireTrustedSession calls dbFirst for trusted_users check → null = not trusted
     mockDbFirst.mockResolvedValue(null);
-    const req = await makeRequest(
-      "http://localhost/api/suggestions/sug1/approve",
-      UNTRUSTED,
-      { method: "POST" },
-    );
+    const req = await makeRequest("http://localhost/api/suggestions/sug1/approve", UNTRUSTED, {
+      method: "POST",
+    });
     const res = await POST(req, { params: Promise.resolve({ id: "sug1" }) });
     expect(res.status).toBe(403);
   });
@@ -75,11 +69,11 @@ describe("POST /api/suggestions/[id]/approve", () => {
     const { POST } = await import("@/app/api/suggestions/[id]/approve/route");
     // First call: trusted_users → trusted; second call: suggestion → null
     mockDbFirst.mockResolvedValueOnce({ discord_id: SESSION.sub }).mockResolvedValueOnce(null);
-    const req = await makeRequest(
-      "http://localhost/api/suggestions/missing/approve",
-      SESSION,
-      { method: "POST", headers: { "Content-Type": "application/json" }, body: "{}" },
-    );
+    const req = await makeRequest("http://localhost/api/suggestions/missing/approve", SESSION, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: "{}",
+    });
     const res = await POST(req, { params: Promise.resolve({ id: "missing" }) });
     expect(res.status).toBe(404);
   });
@@ -89,11 +83,11 @@ describe("POST /api/suggestions/[id]/approve", () => {
     mockDbFirst
       .mockResolvedValueOnce({ discord_id: SESSION.sub })
       .mockResolvedValueOnce({ ...PENDING_SUGGESTION, status: "accepted" });
-    const req = await makeRequest(
-      "http://localhost/api/suggestions/sug1/approve",
-      SESSION,
-      { method: "POST", headers: { "Content-Type": "application/json" }, body: "{}" },
-    );
+    const req = await makeRequest("http://localhost/api/suggestions/sug1/approve", SESSION, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: "{}",
+    });
     const res = await POST(req, { params: Promise.resolve({ id: "sug1" }) });
     expect(res.status).toBe(409);
   });
@@ -103,15 +97,11 @@ describe("POST /api/suggestions/[id]/approve", () => {
     mockDbFirst
       .mockResolvedValueOnce({ discord_id: SESSION.sub })
       .mockResolvedValueOnce(PENDING_SUGGESTION);
-    const req = await makeRequest(
-      "http://localhost/api/suggestions/sug1/approve",
-      SESSION,
-      {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ decision_note: "LGTM" }),
-      },
-    );
+    const req = await makeRequest("http://localhost/api/suggestions/sug1/approve", SESSION, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ decision_note: "LGTM" }),
+    });
     const res = await POST(req, { params: Promise.resolve({ id: "sug1" }) });
     expect(res.status).toBe(200);
     const json = (await res.json()) as any;
@@ -136,11 +126,9 @@ describe("POST /api/suggestions/[id]/reject", () => {
   it("returns 403 if not trusted", async () => {
     const { POST } = await import("@/app/api/suggestions/[id]/reject/route");
     mockDbFirst.mockResolvedValue(null);
-    const req = await makeRequest(
-      "http://localhost/api/suggestions/sug1/reject",
-      UNTRUSTED,
-      { method: "POST" },
-    );
+    const req = await makeRequest("http://localhost/api/suggestions/sug1/reject", UNTRUSTED, {
+      method: "POST",
+    });
     const res = await POST(req, { params: Promise.resolve({ id: "sug1" }) });
     expect(res.status).toBe(403);
   });
@@ -150,15 +138,11 @@ describe("POST /api/suggestions/[id]/reject", () => {
     mockDbFirst
       .mockResolvedValueOnce({ discord_id: SESSION.sub })
       .mockResolvedValueOnce(PENDING_SUGGESTION);
-    const req = await makeRequest(
-      "http://localhost/api/suggestions/sug1/reject",
-      SESSION,
-      {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({}),
-      },
-    );
+    const req = await makeRequest("http://localhost/api/suggestions/sug1/reject", SESSION, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({}),
+    });
     const res = await POST(req, { params: Promise.resolve({ id: "sug1" }) });
     expect(res.status).toBe(400);
   });
@@ -168,15 +152,11 @@ describe("POST /api/suggestions/[id]/reject", () => {
     mockDbFirst
       .mockResolvedValueOnce({ discord_id: SESSION.sub })
       .mockResolvedValueOnce(PENDING_SUGGESTION);
-    const req = await makeRequest(
-      "http://localhost/api/suggestions/sug1/reject",
-      SESSION,
-      {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ decision_note: "Incorrect translation" }),
-      },
-    );
+    const req = await makeRequest("http://localhost/api/suggestions/sug1/reject", SESSION, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ decision_note: "Incorrect translation" }),
+    });
     const res = await POST(req, { params: Promise.resolve({ id: "sug1" }) });
     expect(res.status).toBe(200);
     const json = (await res.json()) as any;

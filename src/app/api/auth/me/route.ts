@@ -1,8 +1,6 @@
-import { getSession } from "@/lib/session";
-
-export const runtime = "edge";
+import { getSessionState } from "@/lib/session";
 
 export async function GET(req: Request) {
-  const user = await getSession(req);
-  return Response.json({ user });
+  const session = await getSessionState(req);
+  return Response.json(session);
 }

@@ -1,8 +1,6 @@
 import { requireTrustedSession } from "@/lib/session";
 import { dbFirst, dbRun } from "@/lib/db";
 
-export const runtime = "edge";
-
 type SuggestionRow = {
   id: string;
   source_string_id: string;
@@ -22,10 +20,7 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
 
   const { id } = await params;
 
-  const suggestion = await dbFirst<SuggestionRow>(
-    "SELECT * FROM suggestions WHERE id = ?",
-    [id],
-  );
+  const suggestion = await dbFirst<SuggestionRow>("SELECT * FROM suggestions WHERE id = ?", [id]);
 
   if (!suggestion) {
     return Response.json({ error: "Suggestion not found" }, { status: 404 });
@@ -59,7 +54,14 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
        approved_by_discord_id = excluded.approved_by_discord_id,
        approved_at = excluded.approved_at,
        updated_at = strftime('%Y-%m-%dT%H:%M:%fZ','now')`,
-    [crypto.randomUUID(), suggestion.source_string_id, suggestion.locale, suggestion.text, session.sub, now],
+    [
+      crypto.randomUUID(),
+      suggestion.source_string_id,
+      suggestion.locale,
+      suggestion.text,
+      session.sub,
+      now,
+    ],
   );
 
   return Response.json({ ok: true });

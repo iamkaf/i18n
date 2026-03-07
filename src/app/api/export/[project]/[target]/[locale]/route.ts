@@ -1,8 +1,6 @@
 import { dbAll, dbFirst } from "@/lib/db";
 import { requireTokenScopes } from "@/lib/auth";
 
-export const runtime = "edge";
-
 type Params = { project: string; target: string; locale: string };
 
 export async function GET(req: Request, ctx: { params: Promise<Params> }) {

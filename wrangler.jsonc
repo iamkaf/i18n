@@ -64,9 +64,4 @@
    * Note: Use secrets to store sensitive data.
    * https://developers.cloudflare.com/workers/configuration/secrets/
    */
-  "vars": {
-    "DISCORD_CLIENT_ID": "",
-    "DISCORD_CLIENT_SECRET": "",
-    "SESSION_SECRET": "",
-  },
 }

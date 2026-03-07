@@ -6,17 +6,15 @@ import { StatusPill } from "@/components/atelier/status-pill";
 import { ActionRow } from "@/components/atelier/action-row";
 import { FormField } from "@/components/atelier/form-field";
 
-const NAV = [{ href: "/", label: "Home" }];
-
 export default function Page() {
   return (
-    <AppShell nav={NAV} currentHref="/">
+    <AppShell currentHref="/">
       <HeroSection
         kicker="Invitation to Kaf's atelier"
         title="Crowdsourced translations for Kaf's Minecraft mods"
         subtitle="A focused workshop for contributors and trusted translators. It is not a platform, not a SaaS, and not a general-purpose service."
         primaryCta={{ href: "/api/auth/discord", label: "Sign in with Discord" }}
-        secondaryCta={{ href: "https://github.com", label: "Read technical docs" }}
+        secondaryCta={{ href: "/projects", label: "Browse projects" }}
       />
 
       <section className="mb-14">
@@ -27,13 +25,16 @@ export default function Page() {
         />
         <div className="grid md:grid-cols-3 gap-4">
           <FeatureCard title="Suggest translations">
-            Contributors propose locale strings through a simple flow. Discord login keeps identity and accountability clear.
+            Contributors propose locale strings through a simple flow. Discord login keeps identity
+            and accountability clear.
           </FeatureCard>
           <FeatureCard title="Moderate with trusted translators">
-            Trusted translators approve or reject suggestions, keeping quality high and history traceable.
+            Trusted translators approve or reject suggestions, keeping quality high and history
+            traceable.
           </FeatureCard>
           <FeatureCard title="Export approved data">
-            Build systems pull approved translations over HTTP. Public and private project rules are explicit.
+            Build systems pull approved translations over HTTP. Public and private project rules are
+            explicit.
           </FeatureCard>
         </div>
       </section>
@@ -66,7 +67,8 @@ export default function Page() {
         <SectionHeading eyebrow="How it works" title="A compact workflow for real mod shipping" />
         <div className="grid md:grid-cols-3 gap-4">
           <FeatureCard title="1. Import source catalog">
-            Projects and targets are upserted, then source strings are pushed as authoritative input.
+            Projects and targets are upserted, then source strings are pushed as authoritative
+            input.
           </FeatureCard>
           <FeatureCard title="2. Review and moderation">
             Suggestions are reviewed by trusted translators, then accepted or rejected with context.
@@ -81,7 +83,7 @@ export default function Page() {
         <SectionHeading
           eyebrow="UI direction"
           title="Reusable building blocks"
-          description="These are foundational pieces we will keep using as feature pages ship."
+          description="The site now extends this language into project pages, contributor history, and moderation workbenches."
         />
         <div className="grid md:grid-cols-2 gap-4">
           <FeatureCard title="Status and action language">

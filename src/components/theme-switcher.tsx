@@ -14,7 +14,9 @@ export function ThemeSwitcher() {
   const { mode, setMode, mounted } = useTheme();
 
   if (!mounted) {
-    return <div className="h-8 w-[156px] rounded-lg border border-[var(--atelier-border)] bg-[var(--atelier-surface)]" />;
+    return (
+      <div className="h-8 w-[156px] rounded-lg border border-[var(--atelier-border)] bg-[var(--atelier-surface)]" />
+    );
   }
 
   return (

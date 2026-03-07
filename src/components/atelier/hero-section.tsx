@@ -17,7 +17,10 @@ export function HeroSection({
   return (
     <section className="mb-14 md:mb-20">
       <p className="text-xs tracking-[0.22em] uppercase text-[var(--atelier-muted)]">{kicker}</p>
-      <h1 className="mt-4 text-[clamp(2.6rem,8vw,5.8rem)] leading-[0.9] tracking-tight font-bold" style={{ fontFamily: "var(--font-syne)" }}>
+      <h1
+        className="mt-4 text-[clamp(2.6rem,8vw,5.8rem)] leading-[0.9] tracking-tight font-bold"
+        style={{ fontFamily: "var(--font-syne)" }}
+      >
         {title}
       </h1>
       <p className="mt-4 max-w-2xl text-lg text-[var(--atelier-muted)]">{subtitle}</p>

@@ -2,8 +2,6 @@ import { getDB } from "@/lib/db";
 import { requireTokenScopes } from "@/lib/auth";
 import { computePlaceholderSig } from "@/lib/placeholders";
 
-export const runtime = "edge";
-
 type CatalogUpsertPayload = {
   mod: {
     slug: string;

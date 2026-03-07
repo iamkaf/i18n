@@ -1,8 +1,6 @@
 import { requireTrustedSession } from "@/lib/session";
 import { dbFirst, dbRun } from "@/lib/db";
 
-export const runtime = "edge";
-
 type SuggestionRow = {
   id: string;
   status: string;

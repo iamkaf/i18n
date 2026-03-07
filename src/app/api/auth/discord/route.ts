@@ -1,7 +1,5 @@
 import { getEnv } from "@/lib/cf";
 
-export const runtime = "edge";
-
 const REDIRECT_URI =
   process.env.NODE_ENV === "development"
     ? "http://localhost:3000/api/auth/callback"

@@ -1,29 +1,67 @@
 import { create } from "zustand";
-
-type User = {
-  sub: string;
-  name: string;
-  avatar: string | null;
-};
+import { apiJson } from "@/lib/api";
+import type { SessionPayload, UserRole } from "@/lib/session";
 
 type SessionStore = {
-  user: User | null;
+  user: SessionPayload | null;
+  role: UserRole;
+  trusted: boolean;
+  god: boolean;
+  loading: boolean;
   loaded: boolean;
-  setUser: (user: User | null) => void;
-  fetchUser: () => Promise<void>;
+  setSession: (input: {
+    user: SessionPayload | null;
+    role: UserRole;
+    trusted: boolean;
+    god: boolean;
+  }) => void;
+  clearSession: () => void;
+  fetchSession: (force?: boolean) => Promise<void>;
 };
 
-export const useSessionStore = create<SessionStore>((set) => ({
+let inflight: Promise<void> | null = null;
+
+export const useSessionStore = create<SessionStore>((set, get) => ({
   user: null,
+  role: "user",
+  trusted: false,
+  god: false,
+  loading: false,
   loaded: false,
-  setUser: (user) => set({ user, loaded: true }),
-  fetchUser: async () => {
-    try {
-      const res = await fetch("/api/auth/me");
-      const data = (await res.json()) as { user: User | null };
-      set({ user: data.user, loaded: true });
-    } catch {
-      set({ user: null, loaded: true });
-    }
+  setSession: ({ user, role, trusted, god }) =>
+    set({ user, role, trusted, god, loading: false, loaded: true }),
+  clearSession: () =>
+    set({ user: null, role: "user", trusted: false, god: false, loading: false, loaded: true }),
+  fetchSession: async (force = false) => {
+    if (get().loaded && !force) return;
+    if (inflight && !force) return inflight;
+
+    set({ loading: true });
+    inflight = (async () => {
+      try {
+        const data = await apiJson<{
+          user: SessionPayload | null;
+          role: UserRole;
+          trusted: boolean;
+          god: boolean;
+        }>("/api/auth/me", {
+          headers: {},
+        });
+        set({
+          user: data.user,
+          role: data.role,
+          trusted: data.trusted,
+          god: data.god,
+          loading: false,
+          loaded: true,
+        });
+      } catch {
+        set({ user: null, role: "user", trusted: false, god: false, loading: false, loaded: true });
+      } finally {
+        inflight = null;
+      }
+    })();
+
+    await inflight;
   },
 }));

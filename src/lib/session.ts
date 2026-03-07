@@ -1,10 +1,20 @@
 import { getEnv } from "@/lib/cf";
-import { dbFirst } from "@/lib/db";
+import { dbAll, dbFirst, dbRun } from "@/lib/db";
 
 export type SessionPayload = {
   sub: string;
   name: string;
   avatar: string | null;
+};
+
+export type UserRole = "user" | "trusted" | "god";
+export const GOD_DISCORD_ID = "517599684961894400";
+
+export type SessionState = {
+  user: SessionPayload | null;
+  role: UserRole;
+  trusted: boolean;
+  god: boolean;
 };
 
 const COOKIE_NAME = "__session";
@@ -42,18 +52,11 @@ export async function signSession(payload: SessionPayload, secret: string): Prom
   const body = base64url(new TextEncoder().encode(JSON.stringify(claims)));
   const signingInput = `${header}.${body}`;
   const key = await importKey(secret);
-  const sig = await crypto.subtle.sign(
-    "HMAC",
-    key,
-    new TextEncoder().encode(signingInput),
-  );
+  const sig = await crypto.subtle.sign("HMAC", key, new TextEncoder().encode(signingInput));
   return `${signingInput}.${base64url(sig)}`;
 }
 
-export async function verifySession(
-  token: string,
-  secret: string,
-): Promise<SessionPayload | null> {
+export async function verifySession(token: string, secret: string): Promise<SessionPayload | null> {
   const parts = token.split(".");
   if (parts.length !== 3) return null;
   const [header, body, signature] = parts;
@@ -118,13 +121,165 @@ export async function requireSession(req: Request): Promise<SessionPayload> {
 }
 
 export async function requireTrustedSession(req: Request): Promise<SessionPayload> {
+  return requireRole(req, "trusted");
+}
+
+function normalizeRole(role: string | null | undefined): UserRole {
+  return role === "god" ? "god" : role === "trusted" ? "trusted" : "user";
+}
+
+export function hasRequiredRole(role: UserRole, minimumRole: Exclude<UserRole, "user">): boolean {
+  if (minimumRole === "trusted") return role === "trusted" || role === "god";
+  return role === "god";
+}
+
+async function getStoredRole(discordId: string): Promise<UserRole> {
+  if (discordId === GOD_DISCORD_ID) return "god";
+
+  try {
+    const row = await dbFirst<{ role: string }>(
+      "SELECT role FROM trusted_users WHERE discord_id = ?",
+      [discordId],
+    );
+    return row ? normalizeRole(row.role) : "user";
+  } catch {
+    const legacyRow = await dbFirst<{ discord_id: string }>(
+      "SELECT discord_id FROM trusted_users WHERE discord_id = ?",
+      [discordId],
+    );
+    return legacyRow ? "trusted" : "user";
+  }
+}
+
+export async function getUserRole(discordId: string): Promise<UserRole> {
+  return getStoredRole(discordId);
+}
+
+export async function isTrustedUser(discordId: string): Promise<boolean> {
+  return hasRequiredRole(await getUserRole(discordId), "trusted");
+}
+
+export async function isGodUser(discordId: string): Promise<boolean> {
+  return (await getUserRole(discordId)) === "god";
+}
+
+export async function requireRole(
+  req: Request,
+  minimumRole: Exclude<UserRole, "user">,
+): Promise<SessionPayload> {
   const session = await requireSession(req);
-  const row = await dbFirst<{ discord_id: string }>(
-    "SELECT discord_id FROM trusted_users WHERE discord_id = ?",
-    [session.sub],
-  );
-  if (!row) throw new Response("Forbidden", { status: 403 });
+  if (!hasRequiredRole(await getUserRole(session.sub), minimumRole)) {
+    throw new Response("Forbidden", { status: 403 });
+  }
   return session;
+}
+
+export async function requireGodSession(req: Request): Promise<SessionPayload> {
+  return requireRole(req, "god");
+}
+
+export async function getSessionState(req: Request): Promise<SessionState> {
+  const user = await getSession(req);
+  const role = user ? await getUserRole(user.sub) : "user";
+  return {
+    user,
+    role,
+    trusted: hasRequiredRole(role, "trusted"),
+    god: role === "god",
+  };
+}
+
+export async function upsertUserRole(input: {
+  discordId: string;
+  displayName?: string | null;
+  role: Exclude<UserRole, "user">;
+  addedByDiscordId: string;
+}): Promise<void> {
+  if (input.role === "god" && input.discordId !== GOD_DISCORD_ID) {
+    throw new Error("Only the configured Discord ID may hold the god role");
+  }
+
+  await dbRun(
+    `INSERT INTO trusted_users (discord_id, display_name, role, added_by_discord_id)
+     VALUES (?, ?, ?, ?)
+     ON CONFLICT(discord_id) DO UPDATE SET
+       display_name = excluded.display_name,
+       role = excluded.role,
+       added_by_discord_id = excluded.added_by_discord_id`,
+    [input.discordId, input.displayName ?? null, input.role, input.addedByDiscordId],
+  );
+}
+
+export async function removeUserRole(discordId: string): Promise<void> {
+  if (discordId === GOD_DISCORD_ID) {
+    throw new Error("The configured god user cannot be demoted");
+  }
+  await dbRun("DELETE FROM trusted_users WHERE discord_id = ?", [discordId]);
+}
+
+export type ManagedUser = {
+  discord_id: string;
+  display_name: string | null;
+  role: Exclude<UserRole, "user">;
+  added_by_discord_id: string | null;
+  added_at: string;
+};
+
+export async function listManagedUsers(input?: {
+  search?: string;
+  role?: Exclude<UserRole, "user"> | "all";
+}): Promise<ManagedUser[]> {
+  const params: unknown[] = [];
+  const conditions: string[] = [];
+
+  if (input?.search?.trim()) {
+    conditions.push("(discord_id LIKE ? OR COALESCE(display_name, '') LIKE ?)");
+    const pattern = `%${input.search.trim()}%`;
+    params.push(pattern, pattern);
+  }
+
+  if (input?.role && input.role !== "all") {
+    conditions.push("role = ?");
+    params.push(input.role);
+  }
+
+  const where = conditions.length ? `WHERE ${conditions.join(" AND ")}` : "";
+
+  let rows: ManagedUser[];
+  try {
+    rows = await dbAll<ManagedUser>(
+      `SELECT discord_id, display_name, role, added_by_discord_id, added_at
+       FROM trusted_users
+       ${where}
+       ORDER BY CASE role WHEN 'god' THEN 0 ELSE 1 END, COALESCE(display_name, discord_id)`,
+      params,
+    );
+  } catch {
+    const legacyRoleWhere =
+      input?.role && input.role !== "all" && input.role !== "trusted" ? "WHERE 1 = 0" : where;
+    rows = await dbAll<ManagedUser>(
+      `SELECT discord_id, display_name, 'trusted' AS role, added_by_discord_id, added_at
+       FROM trusted_users
+       ${legacyRoleWhere}
+       ORDER BY COALESCE(display_name, discord_id)`,
+      params,
+    );
+  }
+
+  const includesGod = rows.some((row) => row.discord_id === GOD_DISCORD_ID);
+  const matchesGodRole = !input?.role || input.role === "all" || input.role === "god";
+  const matchesGodSearch = !input?.search?.trim() || GOD_DISCORD_ID.includes(input.search.trim());
+  if (!includesGod && matchesGodRole && matchesGodSearch) {
+    rows.unshift({
+      discord_id: GOD_DISCORD_ID,
+      display_name: null,
+      role: "god",
+      added_by_discord_id: "system",
+      added_at: "",
+    });
+  }
+
+  return rows;
 }
 
 export function sessionCookie(token: string): string {

@@ -19,10 +19,12 @@ export function FormField({
         placeholder={placeholder}
         className={cn(
           "atelier-ring border-[var(--atelier-border)] bg-[var(--atelier-surface-soft)]",
-          error ? "border-[var(--atelier-danger)]" : ""
+          error ? "border-[var(--atelier-danger)]" : "",
         )}
       />
-      <span className="mt-1.5 block min-h-[1.1rem] text-xs text-[var(--atelier-muted)]">{error ?? hint}</span>
+      <span className="mt-1.5 block min-h-[1.1rem] text-xs text-[var(--atelier-muted)]">
+        {error ?? hint}
+      </span>
     </label>
   );
 }
