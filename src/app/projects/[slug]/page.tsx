@@ -312,9 +312,14 @@ export default function ProjectPage() {
 
   function refresh() { setRefreshKey((v) => v + 1); }
 
-  function handleLocaleChange(nextLocale: string) {
-    setLocale(nextLocale);
-    setSelectedId(null);
+  function handleLocaleChange(
+    nextLocale: string,
+    options?: { preserveSelection?: boolean },
+  ) {
+    setLocale(normalizeLocaleCode(nextLocale));
+    if (!options?.preserveSelection) {
+      setSelectedId(null);
+    }
   }
 
   /* ---- Submit suggestion ---- */
@@ -410,7 +415,7 @@ export default function ProjectPage() {
                 <div className="flex items-center gap-3 mb-4 flex-wrap">
                   <LocalePicker
                     value={locale}
-                    onChange={handleLocaleChange}
+                    onChange={(nextLocale) => handleLocaleChange(nextLocale)}
                   />
                   <Input
                     value={query}
@@ -550,7 +555,11 @@ export default function ProjectPage() {
                                 </div>
                                 <LocalePicker
                                   value={locale}
-                                  onChange={handleLocaleChange}
+                                  onChange={(nextLocale) =>
+                                    handleLocaleChange(nextLocale, {
+                                      preserveSelection: true,
+                                    })
+                                  }
                                   className="w-full justify-between sm:w-auto sm:min-w-56"
                                 />
                               </div>

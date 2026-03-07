@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 
-import { cleanup, render, screen, waitFor } from "@testing-library/react";
+import { cleanup, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import ProjectPage from "@/app/projects/[slug]/page";
@@ -328,6 +328,100 @@ describe("Project page", () => {
     expect(
       mockApiJson.mock.calls.filter(
         ([input]) => typeof input === "string" && input.startsWith("/api/projects/amber/strings?"),
+      ),
+    ).toHaveLength(1);
+  });
+
+  it("keeps the selected string when switching locale from the translation-panel CTA picker", async () => {
+    mockUseSession.mockReturnValue({ user: { sub: "1", name: "Kaf" }, god: false });
+    mockApiJson.mockImplementation((input: string) => {
+      if (input === "/api/projects/amber") {
+        return Promise.resolve({
+          project: {
+            id: "p1",
+            slug: "amber",
+            name: "Amber",
+            visibility: "public",
+            default_locale: "en_us",
+            icon_url: null,
+            modrinth_project_id: "m1",
+            modrinth_slug: "amber",
+            github_repo_url: "https://github.com/iamkaf/amber",
+            source_string_count: 1,
+            has_source_catalog: 1,
+            updated_at: "2026-03-07T00:00:00.000Z",
+          },
+        });
+      }
+      if (input === "/api/projects/amber/progress") {
+        return Promise.resolve({
+          total_strings: 1,
+          progress: [{ locale: "fr_fr", approved_count: 0, total_strings: 1, coverage: 0 }],
+        });
+      }
+      if (input === "/api/projects/amber/strings?locale=en_us&page=0&limit=250&include_mine=1") {
+        return Promise.resolve({
+          page: 0,
+          limit: 250,
+          total: 1,
+          locale: "en_us",
+          strings: [
+            {
+              id: "ss1",
+              string_key: "menu.title",
+              source_text: "Hello",
+              context: null,
+              approved_translation: null,
+              has_approved_translation: false,
+              my_suggestion: null,
+            },
+          ],
+        });
+      }
+      if (input === "/api/projects/amber/strings?locale=fr_fr&page=0&limit=250&include_mine=1") {
+        return Promise.resolve({
+          page: 0,
+          limit: 250,
+          total: 1,
+          locale: "fr_fr",
+          strings: [
+            {
+              id: "ss1",
+              string_key: "menu.title",
+              source_text: "Hello",
+              context: null,
+              approved_translation: null,
+              has_approved_translation: false,
+              my_suggestion: null,
+            },
+          ],
+        });
+      }
+      throw new Error(`Unexpected apiJson call: ${input}`);
+    });
+
+    const user = userEvent.setup();
+    render(<ProjectPage />);
+
+    await screen.findByText("menu.title");
+    await user.click(screen.getByText("menu.title"));
+
+    const ctaSection = screen.getByLabelText("Translation locale picker");
+    await user.click(within(ctaSection).getByRole("button"));
+
+    const localeDialog = await screen.findByRole("dialog");
+    await user.click(within(localeDialog).getByRole("button", { name: /fr_fr/i }));
+
+    await waitFor(() => {
+      expect(screen.getByPlaceholderText("Translation for fr_fr…")).toBeTruthy();
+    });
+    expect(screen.getByText("menu.title")).toBeTruthy();
+    expect(screen.queryByText("Select a string to start translating.")).toBeNull();
+    expect(
+      mockApiJson.mock.calls.filter(
+        ([input]) =>
+          typeof input === "string" &&
+          input === "/api/projects/amber/strings?locale=fr_fr&page=0&limit=250&include_mine=1",
       ),
     ).toHaveLength(1);
   });

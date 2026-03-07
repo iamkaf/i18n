@@ -4,9 +4,9 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 import { PublicShell } from "@/components/atelier/public-shell";
 import { useSession } from "@/lib/use-session";
-import { ChevronRight } from "lucide-react";
 import { GlobalStatsCard } from "@/components/atelier/global-stats-card";
 import { LanguageLeaderboard } from "@/components/atelier/language-leaderboard";
+import { ProjectIconGrid } from "@/components/atelier/project-icon-grid";
 import { Spinner } from "@/components/atelier/spinner";
 import { apiJson } from "@/lib/api";
 
@@ -20,11 +20,20 @@ type GlobalStats = {
   }>;
 };
 
+type Project = {
+  id: string;
+  slug: string;
+  name: string;
+  icon_url: string | null;
+};
+
 export default function Page() {
   const { user, loading } = useSession();
   const [stats, setStats] = useState<GlobalStats | null>(null);
   const [statsLoading, setStatsLoading] = useState(true);
   const [statsError, setStatsError] = useState<string | null>(null);
+  const [projects, setProjects] = useState<Project[]>([]);
+  const [projectsLoading, setProjectsLoading] = useState(true);
 
   useEffect(() => {
     let alive = true;
@@ -44,68 +53,135 @@ export default function Page() {
     return () => { alive = false; };
   }, []);
 
+  useEffect(() => {
+    let alive = true;
+    async function fetchProjects() {
+      setProjectsLoading(true);
+      try {
+        const data = await apiJson<{ projects: Project[] }>("/api/projects");
+        if (alive) setProjects(data.projects ?? []);
+      } catch {
+        // Silently fail - projects grid is secondary
+      } finally {
+        if (alive) setProjectsLoading(false);
+      }
+    }
+    void fetchProjects();
+    return () => { alive = false; };
+  }, []);
+
   return (
     <PublicShell>
-      <div className="flex-1 flex flex-col px-6 py-12 md:py-20">
-        <div className="text-center w-full max-w-2xl mx-auto flex flex-col items-center justify-center mb-16 opacity-0 translate-y-4 animate-[fadeInUp_1.2s_ease-out_forwards]">
-          <h1 className="text-4xl md:text-5xl font-semibold tracking-tight text-[var(--atelier-text)] mb-4" style={{ fontFamily: "var(--font-syne)" }}>
-            Hello.
-          </h1>
-          <p className="text-lg md:text-xl text-[var(--atelier-muted)] max-w-lg mx-auto leading-relaxed font-medium">
-            This is Kaf&apos;s Atelier.
-            <br />
-            A quiet space dedicated to translating Minecraft mods into your language.
-          </p>
+      <div className="flex-1 flex flex-col relative">
+        {/* Subtle paper texture */}
+        <div 
+          className="fixed inset-0 opacity-[0.02] pointer-events-none z-0 mix-blend-multiply"
+          style={{
+            backgroundImage: `url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='3'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)'/%3E%3C/svg%3E")`,
+          }}
+        />
 
-          <div className="mt-12 opacity-0 animate-[fadeIn_1s_ease-out_forwards_0.8s]">
-            {loading ? null : user ? (
-              <Link
-                href="/projects"
-                className="group flex items-center gap-2 text-[14px] text-[var(--atelier-highlight)] font-medium transition-opacity hover:opacity-80"
-              >
-                Browse projects
-                <ChevronRight className="w-4 h-4 group-hover:translate-x-0.5 transition-transform" />
-              </Link>
-            ) : (
-              <a
-                href="/api/auth/discord"
-                className="group flex flex-col items-center gap-3 transition-opacity hover:opacity-80"
-              >
-                <div className="w-14 h-14 rounded-full bg-[var(--atelier-surface-soft)] border border-[var(--atelier-border)] flex items-center justify-center shadow-sm">
-                  <svg className="w-6 h-6 text-[var(--atelier-highlight)] group-hover:scale-110 transition-transform duration-300" fill="currentColor" viewBox="0 0 24 24">
-                    <path d="M20.317 4.3698a19.7913 19.7913 0 00-4.8851-1.5152.0741.0741 0 00-.0785.0371c-.211.3753-.4447.8648-.6083 1.2495-1.8447-.2762-3.68-.2762-5.4868 0-.1636-.3933-.4058-.8742-.6177-1.2495a.077.077 0 00-.0785-.037 19.7363 19.7363 0 00-4.8852 1.515.0699.0699 0 00-.0321.0277C.5334 9.0458-.319 13.5799.0992 18.0578a.0824.0824 0 00.0312.0561c2.0528 1.5076 4.0413 2.4228 5.9929 3.0294a.0777.0777 0 00.0842-.0276c.4616-.6304.8731-1.2952 1.226-1.9942a.076.076 0 00-.0416-.1057c-.6528-.2476-1.2743-.5495-1.8722-.8923a.077.077 0 01-.0076-.1277c.1258-.0943.2517-.1923.3718-.2914a.0743.0743 0 01.0776-.0105c3.9278 1.7933 8.18 1.7933 12.0614 0a.0739.0739 0 01.0785.0095c.1202.099.246.1981.3728.2924a.077.077 0 01-.0066.1276 12.2986 12.2986 0 01-1.873.8914.0766.0766 0 00-.0407.1067c.3604.698.7719 1.3628 1.225 1.9932a.076.076 0 00.0842.0286c1.961-.6067 3.9495-1.5219 6.0023-3.0294a.077.077 0 00.0313-.0552c.5004-5.177-.8382-9.6739-3.5485-13.6604a.061.061 0 00-.0312-.0286zM8.02 15.3312c-1.1825 0-2.1569-1.0857-2.1569-2.419 0-1.3332.9555-2.4189 2.157-2.4189 1.2108 0 2.1757 1.0952 2.1568 2.419 0 1.3332-.9555 2.4189-2.1569 2.4189zm7.9748 0c-1.1825 0-2.1569-1.0857-2.1569-2.419 0-1.3332.9554-2.4189 2.1569-2.4189 1.2108 0 2.1757 1.0952 2.1568 2.419 0 1.3332-.946 2.4189-2.1568 2.4189Z" />
-                  </svg>
-                </div>
-                <span className="text-[14px] text-[var(--atelier-highlight)] font-medium">Help translate a mod</span>
-              </a>
-            )}
-          </div>
-        </div>
+        <main className="relative z-10 px-6 sm:px-8 lg:px-12 pt-16 sm:pt-24 pb-32">
+          <div className="max-w-3xl mx-auto">
+            
+            {/* Handwritten-style header */}
+            <header className="mb-20">
+              <p className="text-sm text-[var(--atelier-muted)] mb-2" style={{ fontFamily: 'var(--font-geist-mono)' }}>
+                i18n.kaf.sh
+              </p>
+              <div className="w-12 h-px bg-[var(--atelier-text)]/30 mb-8" />
+            </header>
 
-        <div className="w-full space-y-6 opacity-0 animate-[fadeIn_1s_ease-out_forwards_1s]">
-          {statsLoading ? (
-            <div className="flex justify-center py-8">
-              <Spinner />
-            </div>
-          ) : statsError ? (
-            <div className="w-full max-w-4xl mx-auto">
-              <div className="bg-[var(--atelier-surface)] rounded-lg border border-[var(--atelier-border)] p-8 text-center">
-                <p className="text-sm text-[var(--atelier-muted)]">Unable to load stats</p>
+            {/* The Invitation */}
+            <article className="mb-20">
+              <h1
+                className="text-4xl sm:text-5xl lg:text-6xl font-normal text-[var(--atelier-text)] mb-8 leading-tight"
+                style={{ fontFamily: 'var(--font-syne)' }}
+              >
+                Help translate my mods.
+              </h1>
+
+              <div className="prose prose-lg max-w-none">
+                <p className="text-lg sm:text-xl text-[var(--atelier-muted)] leading-relaxed mb-6">
+                  I build Minecraft mods in English. This site lets people translate them into other languages.
+                </p>
+
+                <p className="text-base text-[var(--atelier-muted)]/80 leading-relaxed mb-8">
+                  It&apos;s not a platform or a startup. Just a tool I built because I needed it. If you want to help translate blocks, items, or random UI text, sign in and pick a project.
+                </p>
               </div>
+
+              {/* CTA */}
+              <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4 pt-4">
+                {loading ? (
+                  <div className="h-10 w-32 bg-[var(--atelier-surface)] rounded animate-pulse" />
+                ) : user ? (
+                  <Link
+                    href="/projects"
+                    className="inline-flex items-center gap-2 text-[var(--atelier-text)] border-b-2 border-[var(--atelier-text)] pb-1 hover:text-[var(--atelier-highlight)] hover:border-[var(--atelier-highlight)] transition-colors"
+                    style={{ fontFamily: 'var(--font-syne)' }}
+                  >
+                    <span>See the projects</span>
+                    <span className="text-lg">→</span>
+                  </Link>
+                ) : (
+                  <a
+                    href="/api/auth/discord"
+                    className="group inline-flex items-center gap-3 px-5 py-2.5 rounded-lg border border-[var(--atelier-border)] bg-[var(--atelier-surface)] hover:border-[var(--atelier-highlight)]/50 hover:bg-[var(--atelier-surface-soft)] transition-all"
+                  >
+                    <svg className="w-5 h-5 text-[#5865F2]" fill="currentColor" viewBox="0 0 24 24">
+                      <path d="M20.317 4.37a19.79 19.79 0 00-4.885-1.515.074.074 0 00-.079.037c-.21.376-.444.865-.608 1.25a18.3 18.3 0 00-5.487 0c-.163-.394-.405-.875-.617-1.25a.077.077 0 00-.079-.037A19.74 19.74 0 003.62 4.37a.07.07 0 00-.032.028C.533 9.046-.32 13.58.098 18.058a.082.082 0 00.031.056 20.03 20.03 0 005.993 3.03.078.078 0 00.084-.028 18.1 18.1 0 001.226-1.994.076.076 0 00-.042-.106 11.8 11.8 0 01-1.872-.892.077.077 0 01-.008-.128l.372-.291a.074.074 0 01.078-.011c3.928 1.793 8.18 1.793 12.061 0a.074.074 0 01.079.01c.12.1.246.198.373.293a.077.077 0 01-.007.127 12.3 12.3 0 01-1.873.892.077.077 0 00-.041.107c.36.698.772 1.363 1.225 1.993a.076.076 0 00.084.029 20.03 20.03 0 006.002-3.03.077.077 0 00.031-.055 19.7 19.7 0 00-3.549-13.66.06.06 0 00-.031-.029zM8.02 15.33c-1.183 0-2.157-1.086-2.157-2.419 0-1.333.956-2.419 2.157-2.419 1.211 0 2.176 1.095 2.157 2.419 0 1.333-.956 2.419-2.157 2.419zm7.975 0c-1.183 0-2.157-1.086-2.157-2.419 0-1.333.955-2.419 2.157-2.419 1.211 0 2.176 1.095 2.157 2.419 0 1.333-.946 2.419-2.157 2.419z"/>
+                    </svg>
+                    <span className="text-sm font-medium text-[var(--atelier-text)]">Sign in with Discord</span>
+                  </a>
+                )}
+              </div>
+            </article>
+
+            {/* Divider */}
+            <div className="flex items-center gap-4 mb-16">
+              <div className="flex-1 h-px bg-[var(--atelier-border)]" />
+              <span className="text-xs text-[var(--atelier-muted)] uppercase tracking-widest">At a glance</span>
+              <div className="flex-1 h-px bg-[var(--atelier-border)]" />
             </div>
-          ) : stats ? (
-            <>
-              <GlobalStatsCard
-                totalSourceStrings={stats.total_source_strings}
-                totalApprovedTranslations={stats.total_approved_translations}
-              />
-              <LanguageLeaderboard
-                locales={stats.locales}
-                totalSourceStrings={stats.total_source_strings}
-              />
-            </>
-          ) : null}
-        </div>
+
+            {/* Stats */}
+            <section className="mb-16">
+              {statsLoading ? (
+                <div className="flex justify-center py-12">
+                  <Spinner className="w-6 h-6" />
+                </div>
+              ) : statsError ? (
+                <div className="text-center py-8">
+                  <p className="text-sm text-[var(--atelier-muted)]">Unable to load stats</p>
+                </div>
+              ) : stats ? (
+                <div className="space-y-12">
+                  <GlobalStatsCard
+                    totalSourceStrings={stats.total_source_strings}
+                    totalApprovedTranslations={stats.total_approved_translations}
+                    localeCount={stats.locales.length}
+                  />
+                  <LanguageLeaderboard
+                    locales={stats.locales}
+                    totalSourceStrings={stats.total_source_strings}
+                  />
+                  {!projectsLoading && projects.length > 0 && (
+                    <ProjectIconGrid projects={projects} />
+                  )}
+                </div>
+              ) : null}
+            </section>
+
+            {/* Footer */}
+            <footer className="pt-12 border-t border-[var(--atelier-border)]">
+              <p className="text-sm text-[var(--atelier-muted)]">
+                Built with care for the Minecraft modding community.
+              </p>
+            </footer>
+
+          </div>
+        </main>
       </div>
     </PublicShell>
   );
