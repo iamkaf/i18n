@@ -2,12 +2,13 @@
 
 import * as React from "react";
 import Link from "next/link";
-import { StatusPill } from "@/components/atelier/status-pill";
 import { useSession } from "@/lib/use-session";
 import { useSessionStore } from "@/lib/store";
+import { LogIn, LogOut, User as UserIcon } from "lucide-react";
+import { cn } from "@/lib/utils";
 
-export function AuthControls({ showDashboardLink = false }: { showDashboardLink?: boolean } = {}) {
-  const { user, trusted, god, loading } = useSession();
+export function AuthControls() {
+  const { user, loading } = useSession();
   const clearSession = useSessionStore((state) => state.clearSession);
   const [busy, setBusy] = React.useState(false);
 
@@ -27,7 +28,7 @@ export function AuthControls({ showDashboardLink = false }: { showDashboardLink?
 
   if (loading) {
     return (
-      <div className="h-8 w-[140px] rounded-lg border border-[var(--atelier-border)] bg-[var(--atelier-surface)]" />
+      <div className="h-8 w-8 rounded-full bg-[var(--atelier-surface-soft)]/50 animate-pulse shrink-0" />
     );
   }
 
@@ -35,43 +36,36 @@ export function AuthControls({ showDashboardLink = false }: { showDashboardLink?
     return (
       <Link
         href="/api/auth/discord"
-        className="atelier-ring inline-flex items-center rounded-lg bg-[var(--atelier-accent)] px-3 py-1.5 text-xs text-[var(--atelier-accent-foreground)] hover:bg-[var(--atelier-accent-strong)] transition-colors"
+        className="flex items-center justify-center h-8 w-8 rounded-full text-[var(--atelier-text)]/60 hover:bg-[var(--atelier-bg)]/80 hover:text-[var(--atelier-text)] transition-colors"
+        title="Sign in with Discord"
       >
-        Sign in with Discord
+        <LogIn className="w-4 h-4" />
       </Link>
     );
   }
 
   return (
-    <div className="flex items-center gap-2">
-      {showDashboardLink && user ? (
-        <Link href="/suggestions" className="atelier-ring rounded-lg border border-[var(--atelier-border)] bg-[var(--atelier-highlight)]/10 px-2.5 py-1.5 text-xs font-medium text-[var(--atelier-highlight)] hover:bg-[var(--atelier-highlight)]/20 transition-colors mr-1">
-          Dashboard
-        </Link>
-      ) : null}
-      <div className="flex items-center gap-2 rounded-lg border border-[var(--atelier-border)] bg-[var(--atelier-surface)] px-2.5 py-1.5 text-xs text-[var(--atelier-muted)]">
-        {user.avatar ? (
-          <img
-            src={user.avatar}
-            alt={`${user.name} avatar`}
-            className="h-5 w-5 rounded-full border border-[var(--atelier-border)] object-cover"
-          />
-        ) : null}
-        <span>{user.name}</span>
-        {god ? (
-          <StatusPill variant="god">god</StatusPill>
-        ) : trusted ? (
-          <StatusPill variant="trusted">trusted</StatusPill>
-        ) : null}
-      </div>
-      <button
-        type="button"
-        onClick={() => void logout()}
-        disabled={busy}
-        className="atelier-ring rounded-lg border border-[var(--atelier-border)] bg-[var(--atelier-surface)] px-2.5 py-1.5 text-xs text-[var(--atelier-text)] hover:bg-[#f8f9ff] dark:hover:bg-white/10 transition-colors disabled:opacity-60"
-      >
-        {busy ? "Signing out..." : "Sign out"}
-      </button>
-    </div>
+    <button
+      type="button"
+      onClick={() => void logout()}
+      disabled={busy}
+      title={busy ? "Signing out…" : `Sign out (${user.name})`}
+      className={cn(
+        "group relative flex items-center justify-center h-8 w-8 rounded-full transition-colors overflow-hidden shrink-0",
+        "hover:ring-2 hover:ring-destructive/50",
+        busy && "opacity-50 cursor-not-allowed"
+      )}
+    >
+      {user.avatar ? (
+        <img
+          src={user.avatar}
+          alt={user.name}
+          className="h-8 w-8 rounded-full object-cover transition-opacity group-hover:opacity-30"
+        />
+      ) : (
+        <UserIcon className="h-4 w-4 text-[var(--atelier-text)]/60 group-hover:opacity-30 transition-opacity" />
+      )}
+      <LogOut className="absolute h-3.5 w-3.5 text-destructive opacity-0 group-hover:opacity-100 transition-opacity" />
+    </button>
   );
 }

@@ -8,12 +8,14 @@ import { ErrorStateCard } from "@/components/atelier/error-state-card";
 import { FilterToolbar } from "@/components/atelier/filter-toolbar";
 import { Input } from "@/components/ui/input";
 import { LocaleBadge } from "@/components/atelier/locale-badge";
+import { LocaleCombobox } from "@/components/atelier/locale-combobox";
 import { LockedStateCard } from "@/components/atelier/locked-state-card";
 import { PaginationControls } from "@/components/atelier/pagination-controls";
 import { SectionHeading } from "@/components/atelier/section-heading";
 import { StatusPill } from "@/components/atelier/status-pill";
 import { SuggestionDrawer } from "@/components/atelier/suggestion-drawer";
 import { ApiError, apiJson, getErrorMessage } from "@/lib/api";
+import { isSupportedLocaleCode } from "@/lib/locales";
 import { useSession } from "@/lib/use-session";
 
 type Suggestion = {
@@ -63,7 +65,9 @@ export default function SuggestionsPage() {
         page: String(page),
         limit: "20",
       });
-      if (locale.trim()) params.set("locale", locale.trim().toLowerCase());
+      if (locale.trim() && isSupportedLocaleCode(locale)) {
+        params.set("locale", locale.trim().toLowerCase());
+      }
       if (project.trim()) params.set("project", project.trim());
 
       try {
@@ -130,13 +134,14 @@ export default function SuggestionsPage() {
               <span className="mb-1.5 block text-xs uppercase tracking-[0.15em] text-[var(--atelier-muted)]">
                 Locale
               </span>
-              <Input
+              <LocaleCombobox
                 value={locale}
-                onChange={(event) => {
-                  setLocale(event.target.value);
+                onChange={(nextLocale) => {
+                  setLocale(nextLocale);
                   setPage(0);
                 }}
                 placeholder="fr_fr"
+                allowEmpty
               />
             </label>
             <label className="block min-w-[180px] flex-1">

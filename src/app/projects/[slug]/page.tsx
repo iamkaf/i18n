@@ -9,6 +9,7 @@ import { EmptyStateCard } from "@/components/atelier/empty-state-card";
 import { ErrorStateCard } from "@/components/atelier/error-state-card";
 import { FilterToolbar } from "@/components/atelier/filter-toolbar";
 import { Input } from "@/components/ui/input";
+import { LocaleCombobox } from "@/components/atelier/locale-combobox";
 import { LocaleProgressStrip } from "@/components/atelier/locale-progress-strip";
 import { LockedStateCard } from "@/components/atelier/locked-state-card";
 import { LocaleBadge } from "@/components/atelier/locale-badge";
@@ -19,6 +20,7 @@ import { StringRowCard, type StringRowCardItem } from "@/components/atelier/stri
 import { SuggestionDrawer } from "@/components/atelier/suggestion-drawer";
 import { Button } from "@/components/ui/button";
 import { ApiError, apiJson, getErrorMessage } from "@/lib/api";
+import { isSupportedLocaleCode, normalizeLocaleCode } from "@/lib/locales";
 import { useSession } from "@/lib/use-session";
 
 type Project = {
@@ -96,7 +98,10 @@ export default function ProjectPage() {
   const [error, setError] = useState<string | null>(null);
   const [query, setQuery] = useState(searchParams.get("q") || "");
   const deferredQuery = useDeferredValue(query);
-  const [locale, setLocale] = useState((searchParams.get("locale") || "en_us").toLowerCase());
+  const [locale, setLocale] = useState(() => {
+    const initial = normalizeLocaleCode(searchParams.get("locale") || "en_us");
+    return isSupportedLocaleCode(initial) ? initial : "en_us";
+  });
   const [page, setPage] = useState(Math.max(0, parseInt(searchParams.get("page") ?? "0", 10) || 0));
   const [limit, setLimit] = useState(25);
   const [total, setTotal] = useState(0);
@@ -219,8 +224,13 @@ export default function ProjectPage() {
     async function loadWorkbench() {
       setLoadingStrings(true);
       setError(null);
+      const normalizedLocale = normalizeLocaleCode(locale);
+      if (!isSupportedLocaleCode(normalizedLocale)) {
+        if (alive) setLoadingStrings(false);
+        return;
+      }
       const params = new URLSearchParams({
-        locale,
+        locale: normalizedLocale,
         page: String(page),
         limit: "25",
         include_mine: "1",
@@ -346,7 +356,7 @@ export default function ProjectPage() {
         setUploadLocale("");
       }
       if (payload.locale !== locale && locale === "en_us" && payload.locale !== "en_us") {
-        setLocale(payload.locale);
+        setLocale(normalizeLocaleCode(payload.locale));
       }
       await refreshProjectState();
     } catch (importError) {
@@ -362,9 +372,9 @@ export default function ProjectPage() {
       return;
     }
     const inferredLocale = inferLocaleFromFilename(uploadFile.name);
-    const resolvedLocale = (uploadLocale || inferredLocale).trim().toLowerCase();
-    if (!/^[a-z]{2}_[a-z]{2}$/.test(resolvedLocale)) {
-      sileo.error({ title: "Locale required", description: "Use a filename like zh_cn.json or enter a locale manually." });
+    const resolvedLocale = normalizeLocaleCode(uploadLocale || inferredLocale);
+    if (!isSupportedLocaleCode(resolvedLocale)) {
+      sileo.error({ title: "Locale required", description: "Choose a valid locale from the list." });
       return;
     }
     if (!project?.has_source_catalog && resolvedLocale !== "en_us") {
@@ -384,15 +394,15 @@ export default function ProjectPage() {
 
   async function handleSubmitSuggestion() {
     if (!selectedString) return;
-    const nextLocale = locale.trim().toLowerCase();
+    const nextLocale = normalizeLocaleCode(locale);
     const nextText = composerText.trim();
 
     if (nextLocale === "en_us") {
       setComposerError("Canonical English is imported directly. Pick a translation locale.");
       return;
     }
-    if (!/^[a-z]{2}_[a-z]{2}$/.test(nextLocale)) {
-      setComposerError("Locale must match xx_xx.");
+    if (!isSupportedLocaleCode(nextLocale)) {
+      setComposerError("Pick a valid Minecraft locale.");
       return;
     }
     if (!nextText.length) {
@@ -706,10 +716,11 @@ export default function ProjectPage() {
                       <span className="mb-1.5 block text-[11px] uppercase tracking-wider text-[var(--atelier-muted)]">
                         Locale
                       </span>
-                      <Input
+                      <LocaleCombobox
                         value={uploadLocale}
-                        onChange={(event) => setUploadLocale(event.target.value.toLowerCase())}
+                        onChange={setUploadLocale}
                         placeholder="zh_cn"
+                        allowEmpty
                       />
                     </label>
                     <div className="flex items-end">
@@ -760,10 +771,10 @@ export default function ProjectPage() {
                   <span className="mb-1.5 block text-xs uppercase tracking-[0.15em] text-[var(--atelier-muted)]">
                     Locale
                   </span>
-                  <Input
+                  <LocaleCombobox
                     value={locale}
-                    onChange={(event) => {
-                      setLocale(event.target.value.toLowerCase());
+                    onChange={(nextLocale) => {
+                      setLocale(nextLocale);
                       setPage(0);
                     }}
                     placeholder="zh_cn"
@@ -789,7 +800,7 @@ export default function ProjectPage() {
                   items={progress}
                   activeLocale={locale}
                   onSelect={(nextLocale) => {
-                    setLocale(nextLocale);
+                    setLocale(normalizeLocaleCode(nextLocale));
                     setPage(0);
                   }}
                 />
@@ -882,9 +893,9 @@ export default function ProjectPage() {
                           <label className="mb-1.5 block text-xs uppercase tracking-[0.15em] text-[var(--atelier-muted)]">
                             Locale
                           </label>
-                          <Input
+                          <LocaleCombobox
                             value={locale}
-                            onChange={(event) => setLocale(event.target.value.toLowerCase())}
+                            onChange={setLocale}
                             placeholder="zh_cn"
                           />
                         </div>

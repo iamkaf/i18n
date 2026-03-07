@@ -8,7 +8,6 @@ import { ErrorStateCard } from "@/components/atelier/error-state-card";
 import { FilterToolbar } from "@/components/atelier/filter-toolbar";
 import { Input } from "@/components/ui/input";
 import { LockedStateCard } from "@/components/atelier/locked-state-card";
-import { ModrinthImporter } from "@/components/atelier/modrinth-importer";
 import { SectionHeading } from "@/components/atelier/section-heading";
 import { StatusPill } from "@/components/atelier/status-pill";
 import { Button } from "@/components/ui/button";
@@ -42,7 +41,6 @@ export default function UsersPage() {
   const [discordHandle, setDiscordHandle] = useState("");
   const [newRole, setNewRole] = useState<UserRole>("trusted");
   
-  const [showImporter, setShowImporter] = useState(false);
   const [showGrantRole, setShowGrantRole] = useState(false);
 
   async function loadUsers() {
@@ -93,12 +91,7 @@ export default function UsersPage() {
             <Button variant="outline" onClick={() => setShowGrantRole(!showGrantRole)} className="bg-[var(--atelier-surface-soft)]">
               {showGrantRole ? "Hide Grant Role" : "Grant Role"}
             </Button>
-            <Button variant="outline" onClick={() => setShowImporter(!showImporter)} className="bg-[var(--atelier-surface-soft)]">
-              {showImporter ? "Hide Importer" : "Import from Modrinth"}
-            </Button>
           </div>
-
-          {showImporter && <ModrinthImporter />}
 
           {showGrantRole && (
             <section className="bg-[var(--atelier-surface-soft)]/50 backdrop-blur-md rounded-2xl p-6 border border-[var(--atelier-border)]">

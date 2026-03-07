@@ -2,9 +2,10 @@
 
 import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { DrawerPanel } from "@/components/atelier/drawer-panel";
+import { LocaleCombobox } from "@/components/atelier/locale-combobox";
 import { getErrorMessage } from "@/lib/api";
+import { isSupportedLocaleCode } from "@/lib/locales";
 
 export function SuggestionDrawer({
   open,
@@ -48,8 +49,8 @@ export function SuggestionDrawer({
     const nextLocale = locale.trim().toLowerCase();
     const nextText = text.trim();
 
-    if (!/^[a-z]{2}_[a-z]{2}$/.test(nextLocale)) {
-      setError("Locale must match xx_xx.");
+    if (!isSupportedLocaleCode(nextLocale)) {
+      setError("Pick a valid Minecraft locale.");
       return;
     }
     if (!nextText.length) {
@@ -90,11 +91,10 @@ export function SuggestionDrawer({
           <label className="mb-1.5 block text-xs uppercase tracking-[0.15em] text-[var(--atelier-muted)]">
             Locale
           </label>
-          <Input
+          <LocaleCombobox
             value={locale}
-            onChange={(event) => setLocale(event.target.value)}
+            onChange={setLocale}
             placeholder="fr_fr"
-            maxLength={12}
           />
         </div>
         <div>

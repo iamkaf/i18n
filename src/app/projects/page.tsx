@@ -10,8 +10,19 @@ import { EmptyStateCard } from "@/components/atelier/empty-state-card";
 import { ErrorStateCard } from "@/components/atelier/error-state-card";
 import { FilterToolbar } from "@/components/atelier/filter-toolbar";
 import { LocaleBadge } from "@/components/atelier/locale-badge";
+import { ModrinthImporter } from "@/components/atelier/modrinth-importer";
+import { Button } from "@/components/ui/button";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { apiJson } from "@/lib/api";
+import { useSession } from "@/lib/use-session";
 
 type Project = {
   id: string;
@@ -28,11 +39,13 @@ type Project = {
 };
 
 export default function ProjectsPage() {
+  const { god } = useSession();
   const [projects, setProjects] = useState<Project[]>([]);
   const [query, setQuery] = useState("");
   const deferredQuery = useDeferredValue(query);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [showImporter, setShowImporter] = useState(false);
 
   useEffect(() => {
     let alive = true;
@@ -78,6 +91,32 @@ export default function ProjectsPage() {
             />
           </label>
         </FilterToolbar>
+
+        {god && (
+          <div className="mb-8 flex justify-end -mt-6">
+            <Dialog open={showImporter} onOpenChange={setShowImporter}>
+              <DialogTrigger asChild>
+                <Button className="bg-[var(--atelier-surface-soft)] text-[var(--atelier-text)] border border-[var(--atelier-border)] shadow-sm hover:bg-[var(--atelier-bg)]">
+                  <svg className="w-4 h-4 mr-2 opacity-70" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                  </svg>
+                  Import from Modrinth
+                </Button>
+              </DialogTrigger>
+              <DialogContent className="max-w-[95vw] sm:max-w-4xl max-h-[90vh] overflow-y-auto bg-[var(--atelier-bg)]/95 backdrop-blur-2xl border-[var(--atelier-border)] shadow-2xl p-0 gap-0">
+                <DialogHeader className="p-6 pb-4 border-b border-[var(--atelier-border)]/50 bg-[var(--atelier-surface-soft)]/50 sticky top-0 z-10 backdrop-blur-xl">
+                  <DialogTitle className="text-xl font-semibold tracking-tight">Import Modrinth Project</DialogTitle>
+                  <DialogDescription className="text-[var(--atelier-muted)] text-[15px]">
+                    Create a new local shell from Modrinth metadata. Source strings won't be modified here.
+                  </DialogDescription>
+                </DialogHeader>
+                <div className="p-6 bg-[var(--atelier-bg)] relative z-0">
+                  <ModrinthImporter />
+                </div>
+              </DialogContent>
+            </Dialog>
+          </div>
+        )}
 
         {loading ? (
           <section className="bg-[var(--atelier-surface)] rounded-2xl border border-[var(--atelier-border)] overflow-hidden shadow-sm backdrop-blur-xl animate-pulse">

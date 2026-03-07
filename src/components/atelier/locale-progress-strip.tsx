@@ -32,7 +32,7 @@ export function LocaleProgressStrip({
             }`}
           >
             <div className="text-xs uppercase tracking-[0.16em] text-[var(--atelier-muted)]">
-              <LocaleBadge locale={item.locale} flagClassName="text-base" codeClassName="normal-case" />
+              <LocaleBadge locale={item.locale} flagClassName="h-4 w-6" codeClassName="normal-case" />
             </div>
             <div className="mt-1 text-sm font-medium">
               {item.approved_count}/{item.total_strings}

@@ -1,9 +1,11 @@
+import type { ComponentType, SVGProps } from "react";
+import * as FlagIcons from "country-flag-icons/react/3x2";
+import { Globe } from "lucide-react";
 import { cn } from "@/lib/utils";
 
-const REGIONAL_INDICATOR_OFFSET = 127397;
-const FALLBACK_GLOBE = String.fromCodePoint(0x1f310);
+type FlagIconComponent = ComponentType<SVGProps<SVGSVGElement>>;
 
-function localeToFlag(locale: string): string | null {
+function localeToCountryCode(locale: string): string | null {
   const match = locale.trim().toLowerCase().match(/^[a-z]{2}[_-]([a-z]{2})$/);
   const country = match?.[1]?.toUpperCase();
   if (!country || country.length !== 2) return null;
@@ -11,9 +13,7 @@ function localeToFlag(locale: string): string | null {
   const [first, second] = country;
   if (!/[A-Z]/.test(first) || !/[A-Z]/.test(second)) return null;
 
-  return `${String.fromCodePoint(first.charCodeAt(0) + REGIONAL_INDICATOR_OFFSET)}${String.fromCodePoint(
-    second.charCodeAt(0) + REGIONAL_INDICATOR_OFFSET,
-  )}`;
+  return country;
 }
 
 export function LocaleBadge({
@@ -28,12 +28,24 @@ export function LocaleBadge({
   flagClassName?: string;
 }) {
   const normalized = locale.trim().toLowerCase();
-  const flag = localeToFlag(normalized);
+  const countryCode = localeToCountryCode(normalized);
+  const FlagIcon = (countryCode
+    ? (FlagIcons as Record<string, FlagIconComponent>)[countryCode]
+    : undefined) as FlagIconComponent | undefined;
 
   return (
     <span className={cn("inline-flex items-center gap-1.5", className)}>
-      <span aria-hidden="true" className={cn("text-sm leading-none", flagClassName)}>
-        {flag ?? FALLBACK_GLOBE}
+      <span aria-hidden="true" className="inline-flex items-center">
+        {FlagIcon ? (
+          <FlagIcon
+            className={cn(
+              "h-3.5 w-5 shrink-0 overflow-hidden rounded-[2px] border border-black/10 dark:border-white/20",
+              flagClassName,
+            )}
+          />
+        ) : (
+          <Globe className={cn("h-3.5 w-3.5 text-[var(--atelier-muted)]", flagClassName)} />
+        )}
       </span>
       <span className={codeClassName}>{normalized || locale}</span>
     </span>

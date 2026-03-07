@@ -8,6 +8,7 @@ import { ErrorStateCard } from "@/components/atelier/error-state-card";
 import { FilterToolbar } from "@/components/atelier/filter-toolbar";
 import { Input } from "@/components/ui/input";
 import { LocaleBadge } from "@/components/atelier/locale-badge";
+import { LocaleCombobox } from "@/components/atelier/locale-combobox";
 import { LockedStateCard } from "@/components/atelier/locked-state-card";
 import { ModerationDecisionDrawer } from "@/components/atelier/moderation-decision-drawer";
 import { PaginationControls } from "@/components/atelier/pagination-controls";
@@ -15,6 +16,7 @@ import { SectionHeading } from "@/components/atelier/section-heading";
 import { StatusPill } from "@/components/atelier/status-pill";
 import { Button } from "@/components/ui/button";
 import { ApiError, apiJson, getErrorMessage } from "@/lib/api";
+import { isSupportedLocaleCode } from "@/lib/locales";
 import { useSession } from "@/lib/use-session";
 import { cn } from "@/lib/utils";
 
@@ -65,7 +67,9 @@ export default function ModerationPage() {
         page: String(page),
         limit: "20",
       });
-      if (locale.trim()) params.set("locale", locale.trim().toLowerCase());
+      if (locale.trim() && isSupportedLocaleCode(locale)) {
+        params.set("locale", locale.trim().toLowerCase());
+      }
       if (project.trim()) params.set("project", project.trim());
 
       try {
@@ -137,14 +141,16 @@ export default function ModerationPage() {
             </div>
             
             <div className="flex items-center gap-3 w-full md:w-auto">
-              <Input
+              <LocaleCombobox
                 value={locale}
-                onChange={(event) => {
-                  setLocale(event.target.value);
+                onChange={(nextLocale) => {
+                  setLocale(nextLocale);
                   setPage(0);
                 }}
-                placeholder="Locale (e.g. fr_fr)"
-                className="bg-[var(--atelier-surface-soft)]/50 backdrop-blur-md border-[var(--atelier-border)]/50 h-10 rounded-xl focus:bg-[var(--atelier-surface)] transition-colors placeholder:text-[var(--atelier-muted)]/50"
+                placeholder="fr_fr"
+                allowEmpty
+                className="w-full"
+                inputClassName="bg-[var(--atelier-surface-soft)]/50 backdrop-blur-md border-[var(--atelier-border)]/50 h-10 rounded-xl focus:bg-[var(--atelier-surface)] transition-colors placeholder:text-[var(--atelier-muted)]/50"
               />
               <Input
                 value={project}
