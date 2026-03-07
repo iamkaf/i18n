@@ -19,6 +19,7 @@ type UserRole = "trusted" | "god";
 type ManagedUser = {
   discord_id: string;
   display_name: string | null;
+  discord_handle: string | null;
   role: UserRole;
   added_by_discord_id: string | null;
   added_at: string;
@@ -34,6 +35,7 @@ export default function UsersPage() {
   const [error, setError] = useState<string | null>(null);
   const [discordId, setDiscordId] = useState("");
   const [displayName, setDisplayName] = useState("");
+  const [discordHandle, setDiscordHandle] = useState("");
   const [newRole, setNewRole] = useState<UserRole>("trusted");
 
   async function loadUsers() {
@@ -84,7 +86,7 @@ export default function UsersPage() {
             <h3 className="text-sm font-semibold uppercase tracking-[0.14em] text-[var(--atelier-muted)]">
               Grant role
             </h3>
-            <div className="mt-4 grid gap-3 md:grid-cols-[minmax(0,1.5fr)_minmax(0,1.2fr)_160px_120px]">
+            <div className="mt-4 grid gap-3 md:grid-cols-[minmax(0,1.4fr)_minmax(0,1.15fr)_minmax(0,1fr)_160px_120px]">
               <label className="block">
                 <span className="mb-1.5 block text-xs uppercase tracking-[0.15em] text-[var(--atelier-muted)]">
                   Discord ID
@@ -103,6 +105,16 @@ export default function UsersPage() {
                   value={displayName}
                   onChange={(event) => setDisplayName(event.target.value)}
                   placeholder="Optional label"
+                />
+              </label>
+              <label className="block">
+                <span className="mb-1.5 block text-xs uppercase tracking-[0.15em] text-[var(--atelier-muted)]">
+                  Handle
+                </span>
+                <Input
+                  value={discordHandle}
+                  onChange={(event) => setDiscordHandle(event.target.value)}
+                  placeholder="kaf"
                 />
               </label>
               <label className="block">
@@ -129,12 +141,14 @@ export default function UsersPage() {
                         body: JSON.stringify({
                           discord_id: discordId.trim(),
                           display_name: displayName.trim() || null,
+                          discord_handle: discordHandle.trim().replace(/^@+/, "") || null,
                           role: newRole,
                         }),
                       });
                       sileo.success({ title: "Role updated", description: discordId.trim() });
                       setDiscordId("");
                       setDisplayName("");
+                      setDiscordHandle("");
                       setNewRole("trusted");
                       await loadUsers();
                     } catch (saveError) {
@@ -162,7 +176,7 @@ export default function UsersPage() {
               <Input
                 value={search}
                 onChange={(event) => setSearch(event.target.value)}
-                placeholder="Discord ID or display name"
+                placeholder="Discord ID, display name, or handle"
               />
             </label>
             <label className="block min-w-[160px]">
@@ -202,6 +216,9 @@ export default function UsersPage() {
                       <h3 className="mt-2 text-base font-semibold">
                         {entry.display_name || "Unnamed user"}
                       </h3>
+                      <div className="mt-1 text-sm text-[var(--atelier-muted)]">
+                        Handle: {entry.discord_handle ? `@${entry.discord_handle}` : "not set"}
+                      </div>
                       <div className="mt-2 text-sm text-[var(--atelier-muted)]">
                         added by {entry.added_by_discord_id || "system"}
                         {entry.added_at ? ` on ${new Date(entry.added_at).toLocaleString()}` : ""}
@@ -246,6 +263,7 @@ export default function UsersPage() {
                             method: "PATCH",
                             body: JSON.stringify({
                               display_name: current.display_name,
+                              discord_handle: current.discord_handle,
                               role: current.role,
                             }),
                           });

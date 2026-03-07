@@ -192,6 +192,7 @@ export async function getSessionState(req: Request): Promise<SessionState> {
 export async function upsertUserRole(input: {
   discordId: string;
   displayName?: string | null;
+  discordHandle?: string | null;
   role: Exclude<UserRole, "user">;
   addedByDiscordId: string;
 }): Promise<void> {
@@ -200,13 +201,20 @@ export async function upsertUserRole(input: {
   }
 
   await dbRun(
-    `INSERT INTO trusted_users (discord_id, display_name, role, added_by_discord_id)
-     VALUES (?, ?, ?, ?)
+    `INSERT INTO trusted_users (discord_id, display_name, discord_handle, role, added_by_discord_id)
+     VALUES (?, ?, ?, ?, ?)
      ON CONFLICT(discord_id) DO UPDATE SET
        display_name = excluded.display_name,
+       discord_handle = excluded.discord_handle,
        role = excluded.role,
        added_by_discord_id = excluded.added_by_discord_id`,
-    [input.discordId, input.displayName ?? null, input.role, input.addedByDiscordId],
+    [
+      input.discordId,
+      input.displayName ?? null,
+      input.discordHandle ?? null,
+      input.role,
+      input.addedByDiscordId,
+    ],
   );
 }
 
@@ -220,6 +228,7 @@ export async function removeUserRole(discordId: string): Promise<void> {
 export type ManagedUser = {
   discord_id: string;
   display_name: string | null;
+  discord_handle: string | null;
   role: Exclude<UserRole, "user">;
   added_by_discord_id: string | null;
   added_at: string;
@@ -233,9 +242,11 @@ export async function listManagedUsers(input?: {
   const conditions: string[] = [];
 
   if (input?.search?.trim()) {
-    conditions.push("(discord_id LIKE ? OR COALESCE(display_name, '') LIKE ?)");
+    conditions.push(
+      "(discord_id LIKE ? OR COALESCE(display_name, '') LIKE ? OR COALESCE(discord_handle, '') LIKE ?)",
+    );
     const pattern = `%${input.search.trim()}%`;
-    params.push(pattern, pattern);
+    params.push(pattern, pattern, pattern);
   }
 
   if (input?.role && input.role !== "all") {
@@ -248,21 +259,37 @@ export async function listManagedUsers(input?: {
   let rows: ManagedUser[];
   try {
     rows = await dbAll<ManagedUser>(
-      `SELECT discord_id, display_name, role, added_by_discord_id, added_at
+      `SELECT discord_id, display_name, discord_handle, role, added_by_discord_id, added_at
        FROM trusted_users
        ${where}
-       ORDER BY CASE role WHEN 'god' THEN 0 ELSE 1 END, COALESCE(display_name, discord_id)`,
+       ORDER BY CASE role WHEN 'god' THEN 0 ELSE 1 END,
+                COALESCE(display_name, discord_handle, discord_id)`,
       params,
     );
   } catch {
+    const legacyConditions: string[] = [];
+    const legacyParams: unknown[] = [];
+
+    if (input?.search?.trim()) {
+      legacyConditions.push("(discord_id LIKE ? OR COALESCE(display_name, '') LIKE ?)");
+      const pattern = `%${input.search.trim()}%`;
+      legacyParams.push(pattern, pattern);
+    }
+
+    if (input?.role && input.role !== "all") {
+      legacyConditions.push("role = ?");
+      legacyParams.push(input.role);
+    }
+
+    const legacyWhere = legacyConditions.length ? `WHERE ${legacyConditions.join(" AND ")}` : "";
     const legacyRoleWhere =
-      input?.role && input.role !== "all" && input.role !== "trusted" ? "WHERE 1 = 0" : where;
+      input?.role && input.role !== "all" && input.role !== "trusted" ? "WHERE 1 = 0" : legacyWhere;
     rows = await dbAll<ManagedUser>(
-      `SELECT discord_id, display_name, 'trusted' AS role, added_by_discord_id, added_at
+      `SELECT discord_id, display_name, NULL AS discord_handle, 'trusted' AS role, added_by_discord_id, added_at
        FROM trusted_users
        ${legacyRoleWhere}
        ORDER BY COALESCE(display_name, discord_id)`,
-      params,
+      legacyParams,
     );
   }
 
@@ -273,6 +300,7 @@ export async function listManagedUsers(input?: {
     rows.unshift({
       discord_id: GOD_DISCORD_ID,
       display_name: null,
+      discord_handle: null,
       role: "god",
       added_by_discord_id: "system",
       added_at: "",

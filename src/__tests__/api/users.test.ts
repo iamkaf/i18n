@@ -54,6 +54,7 @@ describe("GET /api/users", () => {
       {
         discord_id: "123456789012345678",
         display_name: "Trusted",
+        discord_handle: "trusted-user",
         role: "trusted",
         added_by_discord_id: "517599684961894400",
         added_at: "2026-03-07T00:00:00.000Z",
@@ -66,6 +67,7 @@ describe("GET /api/users", () => {
     expect(json.users[0].discord_id).toBe("517599684961894400");
     expect(json.users[0].role).toBe("god");
     expect(json.users[1].discord_id).toBe("123456789012345678");
+    expect(json.users[1].discord_handle).toBe("trusted-user");
   });
 });
 
@@ -93,6 +95,7 @@ describe("POST /api/users", () => {
       body: JSON.stringify({
         discord_id: "123456789012345678",
         display_name: "Trusted User",
+        discord_handle: "@trusted-user",
         role: "trusted",
       }),
     });

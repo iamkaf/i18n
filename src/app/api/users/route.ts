@@ -13,6 +13,12 @@ function isDiscordId(value: string): boolean {
   return /^\d{17,20}$/.test(value);
 }
 
+function normalizeDiscordHandle(value: unknown): string | null {
+  if (typeof value !== "string") return null;
+  const normalized = value.trim().replace(/^@+/, "");
+  return normalized || null;
+}
+
 function parseMutableRole(value: unknown): MutableRole | null {
   return value === "trusted" || value === "god" ? value : null;
 }
@@ -46,6 +52,7 @@ export async function POST(req: Request) {
   const body = (await req.json().catch(() => ({}))) as {
     discord_id?: string;
     display_name?: string | null;
+    discord_handle?: string | null;
     role?: string;
   };
 
@@ -53,6 +60,7 @@ export async function POST(req: Request) {
   const role = parseMutableRole(body.role);
   const displayName =
     typeof body.display_name === "string" ? body.display_name.trim() || null : null;
+  const discordHandle = normalizeDiscordHandle(body.discord_handle);
 
   if (!isDiscordId(discordId)) {
     return Response.json({ error: "A valid Discord ID is required" }, { status: 422 });
@@ -72,6 +80,7 @@ export async function POST(req: Request) {
   await upsertUserRole({
     discordId,
     displayName,
+    discordHandle,
     role,
     addedByDiscordId: session.sub,
   });
@@ -81,6 +90,7 @@ export async function POST(req: Request) {
     user: {
       discord_id: discordId,
       display_name: displayName,
+      discord_handle: discordHandle,
       role: await getUserRole(discordId),
     },
   });

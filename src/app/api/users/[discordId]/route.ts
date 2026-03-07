@@ -18,6 +18,12 @@ function isDiscordId(value: string): boolean {
   return /^\d{17,20}$/.test(value);
 }
 
+function normalizeDiscordHandle(value: unknown): string | null {
+  if (typeof value !== "string") return null;
+  const normalized = value.trim().replace(/^@+/, "");
+  return normalized || null;
+}
+
 export async function GET(req: Request, { params }: { params: Promise<{ discordId: string }> }) {
   try {
     await requireGodSession(req);
@@ -56,10 +62,12 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ discor
 
   const body = (await req.json().catch(() => ({}))) as {
     display_name?: string | null;
+    discord_handle?: string | null;
     role?: UserRole;
   };
   const displayName =
     typeof body.display_name === "string" ? body.display_name.trim() || null : null;
+  const discordHandle = normalizeDiscordHandle(body.discord_handle);
   const role = body.role === "user" ? "user" : parseMutableRole(body.role);
 
   if (!role) {
@@ -83,6 +91,7 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ discor
     await upsertUserRole({
       discordId,
       displayName,
+      discordHandle,
       role,
       addedByDiscordId: session.sub,
     });
@@ -93,6 +102,7 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ discor
     user: {
       discord_id: discordId,
       display_name: displayName,
+      discord_handle: discordHandle,
       role: await getUserRole(discordId),
     },
   });

@@ -53,6 +53,7 @@ describe("UsersPage", () => {
                 {
                   discord_id: "517599684961894400",
                   display_name: "Kaf",
+                  discord_handle: "kaf",
                   role: "god",
                   added_by_discord_id: "system",
                   added_at: "2026-03-07T00:00:00.000Z",
@@ -69,6 +70,7 @@ describe("UsersPage", () => {
     await waitFor(() => {
       expect(screen.getByText("517599684961894400")).toBeTruthy();
       expect(screen.getByText("Kaf")).toBeTruthy();
+      expect(screen.getByText("Handle: @kaf")).toBeTruthy();
     });
   });
 });
