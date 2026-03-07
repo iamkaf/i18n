@@ -15,6 +15,7 @@ import { Button } from "@/components/ui/button";
 import { ApiError, apiJson, getErrorMessage } from "@/lib/api";
 import { GOD_DISCORD_ID } from "@/lib/auth-constants";
 import { useSession } from "@/lib/use-session";
+import { cn } from "@/lib/utils";
 
 type UserRole = "trusted" | "god";
 
@@ -40,6 +41,9 @@ export default function UsersPage() {
   const [displayName, setDisplayName] = useState("");
   const [discordHandle, setDiscordHandle] = useState("");
   const [newRole, setNewRole] = useState<UserRole>("trusted");
+  
+  const [showImporter, setShowImporter] = useState(false);
+  const [showGrantRole, setShowGrantRole] = useState(false);
 
   async function loadUsers() {
     if (!user || !god) return;
@@ -85,12 +89,22 @@ export default function UsersPage() {
         />
       ) : (
         <div className="grid gap-6">
-          <ModrinthImporter />
+          <div className="flex flex-wrap gap-3">
+            <Button variant="outline" onClick={() => setShowGrantRole(!showGrantRole)} className="bg-[var(--atelier-surface-soft)]">
+              {showGrantRole ? "Hide Grant Role" : "Grant Role"}
+            </Button>
+            <Button variant="outline" onClick={() => setShowImporter(!showImporter)} className="bg-[var(--atelier-surface-soft)]">
+              {showImporter ? "Hide Importer" : "Import from Modrinth"}
+            </Button>
+          </div>
 
-          <section className="atelier-card p-5">
-            <h3 className="text-sm font-semibold uppercase tracking-[0.14em] text-[var(--atelier-muted)]">
-              Grant role
-            </h3>
+          {showImporter && <ModrinthImporter />}
+
+          {showGrantRole && (
+            <section className="bg-[var(--atelier-surface-soft)]/50 backdrop-blur-md rounded-2xl p-6 border border-[var(--atelier-border)]">
+              <h3 className="text-sm font-semibold uppercase tracking-[0.14em] text-[var(--atelier-muted)]">
+                Grant role
+              </h3>
             <div className="mt-4 grid gap-3 md:grid-cols-[minmax(0,1.4fr)_minmax(0,1.15fr)_minmax(0,1fr)_160px_120px]">
               <label className="block">
                 <span className="mb-1.5 block text-xs uppercase tracking-[0.15em] text-[var(--atelier-muted)]">
@@ -172,32 +186,34 @@ export default function UsersPage() {
               </div>
             </div>
           </section>
+          )}
 
-          <FilterToolbar>
-            <label className="block min-w-[220px] flex-1">
-              <span className="mb-1.5 block text-xs uppercase tracking-[0.15em] text-[var(--atelier-muted)]">
-                Search
-              </span>
+          <FilterToolbar contentClassName="flex flex-col md:flex-row md:items-center justify-between gap-4 w-full">
+            <div className="flex items-center gap-3 w-full md:w-auto flex-1 max-w-sm">
               <Input
                 value={search}
                 onChange={(event) => setSearch(event.target.value)}
-                placeholder="Discord ID, display name, or handle"
+                placeholder="Search by ID, name, or handle"
+                className="bg-[var(--atelier-surface-soft)]/50 backdrop-blur-md border-[var(--atelier-border)]/50 h-10 rounded-xl focus:bg-[var(--atelier-surface)] transition-colors placeholder:text-[var(--atelier-muted)]/50 w-full"
               />
-            </label>
-            <label className="block min-w-[160px]">
-              <span className="mb-1.5 block text-xs uppercase tracking-[0.15em] text-[var(--atelier-muted)]">
-                Role
-              </span>
-              <select
-                value={roleFilter}
-                onChange={(event) => setRoleFilter(event.target.value as "all" | UserRole)}
-                className="atelier-ring h-9 w-full rounded-md border border-[var(--atelier-border)] bg-[var(--atelier-surface-soft)] px-3 text-sm"
-              >
-                <option value="all">all</option>
-                <option value="god">god</option>
-                <option value="trusted">trusted</option>
-              </select>
-            </label>
+            </div>
+            <div className="flex bg-[var(--atelier-surface-soft)] p-1 rounded-[1rem] border border-[var(--atelier-border)]/50 w-full md:w-auto overflow-x-auto">
+              {(["all", "god", "trusted"] as const).map((roleOption) => (
+                <button
+                  key={roleOption}
+                  type="button"
+                  onClick={() => setRoleFilter(roleOption)}
+                  className={cn(
+                    "px-5 py-2 rounded-[0.75rem] text-sm font-medium capitalize transition-all duration-200 outline-none flex-1 md:flex-none",
+                    roleFilter === roleOption
+                      ? "bg-[var(--atelier-bg)] text-[var(--atelier-text)] shadow-sm ring-1 ring-black/5 dark:ring-white/10"
+                      : "text-[var(--atelier-muted)] hover:text-[var(--atelier-text)] hover:bg-[var(--atelier-surface)]/50"
+                  )}
+                >
+                  {roleOption}
+                </button>
+              ))}
+            </div>
           </FilterToolbar>
 
           {busy ? (
@@ -215,14 +231,14 @@ export default function UsersPage() {
           ) : error ? (
             <ErrorStateCard description={error} />
           ) : users.length === 0 ? (
-            <div className="flex flex-col items-center justify-center py-20 px-4 text-center">
-              <div className="w-16 h-16 mb-4 rounded-full bg-[var(--atelier-surface)] border border-[var(--atelier-border)] flex items-center justify-center text-[var(--atelier-muted)] opacity-50">
+            <div className="flex flex-col items-center justify-center py-32 px-4 text-center">
+              <div className="w-16 h-16 mb-5 rounded-full bg-[var(--atelier-surface-soft)] border border-[var(--atelier-border)]/50 flex items-center justify-center text-[var(--atelier-muted)] opacity-80 shadow-sm backdrop-blur-md">
                  <svg className="w-8 h-8" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" />
+                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1} d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" />
                  </svg>
               </div>
-              <h3 className="text-lg font-medium text-[var(--atelier-text)] mb-2">No elevated users</h3>
-              <p className="text-[15px] text-[var(--atelier-muted)] max-w-sm">No trusted or god users matched the current filters.</p>
+              <h3 className="text-[17px] font-medium text-[var(--atelier-text)] mb-1.5">No elevated users</h3>
+              <p className="text-[14px] text-[var(--atelier-muted)] max-w-sm">No trusted or god users matched the current filters.</p>
             </div>
           ) : (
             <div className="bg-[var(--atelier-surface)] rounded-2xl border border-[var(--atelier-border)] overflow-hidden shadow-sm backdrop-blur-xl">

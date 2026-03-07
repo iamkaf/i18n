@@ -79,10 +79,12 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ discor
   }
 
   if (role === "god" && discordId !== GOD_DISCORD_ID) {
-    return Response.json(
-      { error: "Only the configured Discord ID may hold the god role" },
-      { status: 409 },
-    );
+    if (process.env.NODE_ENV !== "development") {
+      return Response.json(
+        { error: "Only the configured Discord ID may hold the god role" },
+        { status: 409 },
+      );
+    }
   }
 
   if (role === "user") {

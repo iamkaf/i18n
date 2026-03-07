@@ -4,10 +4,12 @@ export function FilterToolbar({
   children,
   sticky = false,
   className,
+  contentClassName,
 }: {
   children: React.ReactNode;
   sticky?: boolean;
   className?: string;
+  contentClassName?: string;
 }) {
   return (
     <section
@@ -17,7 +19,9 @@ export function FilterToolbar({
         className,
       )}
     >
-      <div className="flex flex-wrap items-end gap-3 max-w-5xl mx-auto">{children}</div>
+      <div className={cn("flex flex-wrap items-end gap-3 max-w-5xl mx-auto", contentClassName)}>
+        {children}
+      </div>
     </section>
   );
 }

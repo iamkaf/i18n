@@ -9,6 +9,7 @@ import { StatusPill } from "@/components/atelier/status-pill";
 import { EmptyStateCard } from "@/components/atelier/empty-state-card";
 import { ErrorStateCard } from "@/components/atelier/error-state-card";
 import { FilterToolbar } from "@/components/atelier/filter-toolbar";
+import { LocaleBadge } from "@/components/atelier/locale-badge";
 import { Input } from "@/components/ui/input";
 import { apiJson } from "@/lib/api";
 
@@ -121,7 +122,8 @@ export default function ProjectsPage() {
                            )}
                          </h3>
                          <p className="text-[13px] text-[var(--atelier-muted)] mt-0.5">
-                           {project.source_string_count.toLocaleString()} strings • {project.default_locale}
+                           {project.source_string_count.toLocaleString()} strings •{" "}
+                           <LocaleBadge locale={project.default_locale} />
                          </p>
                        </div>
                     </div>

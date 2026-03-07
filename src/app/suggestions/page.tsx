@@ -7,6 +7,7 @@ import { EmptyStateCard } from "@/components/atelier/empty-state-card";
 import { ErrorStateCard } from "@/components/atelier/error-state-card";
 import { FilterToolbar } from "@/components/atelier/filter-toolbar";
 import { Input } from "@/components/ui/input";
+import { LocaleBadge } from "@/components/atelier/locale-badge";
 import { LockedStateCard } from "@/components/atelier/locked-state-card";
 import { PaginationControls } from "@/components/atelier/pagination-controls";
 import { SectionHeading } from "@/components/atelier/section-heading";
@@ -190,7 +191,7 @@ export default function SuggestionsPage() {
                               {suggestion.source_string.key}
                             </span>
                             <span className="text-[12px] text-[var(--atelier-muted)]">
-                              {suggestion.locale} • {suggestion.project_slug}
+                              <LocaleBadge locale={suggestion.locale} /> • {suggestion.project_slug}
                             </span>
                          </div>
                          <h3 className="text-[16px] font-medium text-[var(--atelier-text)] leading-snug">

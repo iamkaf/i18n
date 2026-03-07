@@ -7,6 +7,7 @@ import { EmptyStateCard } from "@/components/atelier/empty-state-card";
 import { ErrorStateCard } from "@/components/atelier/error-state-card";
 import { FilterToolbar } from "@/components/atelier/filter-toolbar";
 import { Input } from "@/components/ui/input";
+import { LocaleBadge } from "@/components/atelier/locale-badge";
 import { LockedStateCard } from "@/components/atelier/locked-state-card";
 import { ModerationDecisionDrawer } from "@/components/atelier/moderation-decision-drawer";
 import { PaginationControls } from "@/components/atelier/pagination-controls";
@@ -15,6 +16,7 @@ import { StatusPill } from "@/components/atelier/status-pill";
 import { Button } from "@/components/ui/button";
 import { ApiError, apiJson, getErrorMessage } from "@/lib/api";
 import { useSession } from "@/lib/use-session";
+import { cn } from "@/lib/utils";
 
 type Suggestion = {
   id: string;
@@ -112,51 +114,48 @@ export default function ModerationPage() {
         />
       ) : (
         <>
-          <FilterToolbar>
-            <label className="block min-w-[150px]">
-              <span className="mb-1.5 block text-xs uppercase tracking-[0.15em] text-[var(--atelier-muted)]">
-                Status
-              </span>
-              <select
-                value={status}
-                onChange={(event) => {
-                  setStatus(event.target.value);
-                  setPage(0);
-                }}
-                className="atelier-ring h-9 w-full rounded-md border border-[var(--atelier-border)] bg-[var(--atelier-surface-soft)] px-3 text-sm"
-              >
-                <option value="pending">pending</option>
-                <option value="accepted">accepted</option>
-                <option value="rejected">rejected</option>
-                <option value="all">all</option>
-              </select>
-            </label>
-            <label className="block min-w-[140px]">
-              <span className="mb-1.5 block text-xs uppercase tracking-[0.15em] text-[var(--atelier-muted)]">
-                Locale
-              </span>
+          <FilterToolbar contentClassName="flex flex-col md:flex-row md:items-center justify-between gap-4 w-full">
+            <div className="flex bg-[var(--atelier-surface-soft)] p-1 rounded-[1rem] border border-[var(--atelier-border)]/50 w-full md:w-auto overflow-x-auto">
+              {["pending", "accepted", "rejected", "all"].map((statusOption) => (
+                <button
+                  key={statusOption}
+                  type="button"
+                  onClick={() => {
+                    setStatus(statusOption);
+                    setPage(0);
+                  }}
+                  className={cn(
+                    "px-5 py-2 rounded-[0.75rem] text-sm font-medium capitalize transition-all duration-200 outline-none flex-1 md:flex-none",
+                    status === statusOption
+                      ? "bg-[var(--atelier-bg)] text-[var(--atelier-text)] shadow-sm ring-1 ring-black/5 dark:ring-white/10"
+                      : "text-[var(--atelier-muted)] hover:text-[var(--atelier-text)] hover:bg-[var(--atelier-surface)]/50"
+                  )}
+                >
+                  {statusOption}
+                </button>
+              ))}
+            </div>
+            
+            <div className="flex items-center gap-3 w-full md:w-auto">
               <Input
                 value={locale}
                 onChange={(event) => {
                   setLocale(event.target.value);
                   setPage(0);
                 }}
-                placeholder="fr_fr"
+                placeholder="Locale (e.g. fr_fr)"
+                className="bg-[var(--atelier-surface-soft)]/50 backdrop-blur-md border-[var(--atelier-border)]/50 h-10 rounded-xl focus:bg-[var(--atelier-surface)] transition-colors placeholder:text-[var(--atelier-muted)]/50"
               />
-            </label>
-            <label className="block min-w-[180px] flex-1">
-              <span className="mb-1.5 block text-xs uppercase tracking-[0.15em] text-[var(--atelier-muted)]">
-                Project
-              </span>
               <Input
                 value={project}
                 onChange={(event) => {
                   setProject(event.target.value);
                   setPage(0);
                 }}
-                placeholder="demo-mod"
+                placeholder="Project search"
+                className="bg-[var(--atelier-surface-soft)]/50 backdrop-blur-md border-[var(--atelier-border)]/50 h-10 rounded-xl lg:w-48 focus:bg-[var(--atelier-surface)] transition-colors placeholder:text-[var(--atelier-muted)]/50"
               />
-            </label>
+            </div>
           </FilterToolbar>
 
           {busy ? (
@@ -175,14 +174,14 @@ export default function ModerationPage() {
           ) : error ? (
             <ErrorStateCard description={error} />
           ) : suggestions.length === 0 ? (
-            <div className="flex flex-col items-center justify-center py-20 px-4 text-center">
-              <div className="w-16 h-16 mb-4 rounded-full bg-[var(--atelier-surface)] border border-[var(--atelier-border)] flex items-center justify-center text-[var(--atelier-muted)] opacity-50">
+            <div className="flex flex-col items-center justify-center py-32 px-4 text-center">
+              <div className="w-16 h-16 mb-5 rounded-full bg-[var(--atelier-surface-soft)] border border-[var(--atelier-border)]/50 flex items-center justify-center text-[var(--atelier-muted)] opacity-80 shadow-sm backdrop-blur-md">
                  <svg className="w-8 h-8" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M5 13l4 4L19 7" />
+                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1} d="M5 13l4 4L19 7" />
                  </svg>
               </div>
-              <h3 className="text-lg font-medium text-[var(--atelier-text)] mb-2">Queue is empty</h3>
-              <p className="text-[15px] text-[var(--atelier-muted)] max-w-sm">No suggestions match the current filters.</p>
+              <h3 className="text-[17px] font-medium text-[var(--atelier-text)] mb-1.5">Queue is empty</h3>
+              <p className="text-[14px] text-[var(--atelier-muted)] max-w-sm">No suggestions match the current filters. Your inbox is clean.</p>
             </div>
           ) : (
             <div className="grid gap-6">
@@ -196,7 +195,7 @@ export default function ModerationPage() {
                              {suggestion.source_string.key}
                            </span>
                            <span className="text-[12px] text-[var(--atelier-muted)] flex items-center gap-1.5">
-                             <span>{suggestion.locale}</span>
+                             <LocaleBadge locale={suggestion.locale} />
                              <span>•</span>
                              <span>{suggestion.project_slug}</span>
                              <span>•</span>

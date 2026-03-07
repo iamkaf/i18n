@@ -11,6 +11,7 @@ import { FilterToolbar } from "@/components/atelier/filter-toolbar";
 import { Input } from "@/components/ui/input";
 import { LocaleProgressStrip } from "@/components/atelier/locale-progress-strip";
 import { LockedStateCard } from "@/components/atelier/locked-state-card";
+import { LocaleBadge } from "@/components/atelier/locale-badge";
 import { PaginationControls } from "@/components/atelier/pagination-controls";
 import { SectionHeading } from "@/components/atelier/section-heading";
 import { StatusPill } from "@/components/atelier/status-pill";
@@ -467,7 +468,7 @@ export default function ProjectPage() {
                       {project.has_source_catalog ? "Ready" : "Metadata"}
                     </StatusPill>
                     <span className="rounded-md bg-[var(--atelier-surface-soft)] border border-[var(--atelier-border)] px-2 py-0.5 text-xs font-mono text-[var(--atelier-muted)]">
-                      en_us
+                      <LocaleBadge locale="en_us" />
                     </span>
                   </div>
                   <h1 className="text-3xl font-semibold tracking-tight text-[var(--atelier-text)]">{project.name}</h1>
@@ -656,7 +657,9 @@ export default function ProjectPage() {
                               className="rounded-lg border border-[var(--atelier-border)] bg-[var(--atelier-surface)] p-3 flex flex-col gap-3"
                             >
                               <div className="font-mono text-[12px] text-[var(--atelier-text)] truncate" title={file.path}>{file.path}</div>
-                              <div className="text-[11px] text-[var(--atelier-muted)] uppercase tracking-wider">{file.locale}</div>
+                              <div className="text-[11px] text-[var(--atelier-muted)] uppercase tracking-wider">
+                                <LocaleBadge locale={file.locale} codeClassName="normal-case" />
+                              </div>
                               <Button
                                 size="sm"
                                 variant="outline"
@@ -725,7 +728,11 @@ export default function ProjectPage() {
                 {lastImport ? (
                   <div className="mt-4 rounded-xl bg-[var(--atelier-highlight)]/10 border border-[var(--atelier-highlight)]/20 p-4">
                     <div className="text-[13px] font-semibold text-[var(--atelier-text)]">
-                      Last import: <span className="uppercase text-[var(--atelier-highlight)]">{lastImport.locale}</span> ({lastImport.mode})
+                      Last import:{" "}
+                      <span className="uppercase text-[var(--atelier-highlight)]">
+                        <LocaleBadge locale={lastImport.locale} codeClassName="normal-case" />
+                      </span>{" "}
+                      ({lastImport.mode})
                     </div>
                     <div className="mt-1 text-[13px] text-[var(--atelier-text)]/80">{summarizeImport(lastImport)}</div>
                     {lastImport.skipped_unmatched.length > 0 ? (

@@ -1,3 +1,5 @@
+import { LocaleBadge } from "@/components/atelier/locale-badge";
+
 type ProgressItem = {
   locale: string;
   approved_count: number;
@@ -30,7 +32,7 @@ export function LocaleProgressStrip({
             }`}
           >
             <div className="text-xs uppercase tracking-[0.16em] text-[var(--atelier-muted)]">
-              {item.locale}
+              <LocaleBadge locale={item.locale} flagClassName="text-base" codeClassName="normal-case" />
             </div>
             <div className="mt-1 text-sm font-medium">
               {item.approved_count}/{item.total_strings}
