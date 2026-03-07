@@ -1,30 +1,7 @@
 import type { Metadata } from "next";
-import { Geist, Geist_Mono, Syne, VT323 } from "next/font/google";
 import { Providers } from "@/components/providers";
 import { SITE_DESCRIPTION, SITE_NAME, SITE_URL } from "@/lib/seo";
 import "./globals.css";
-
-const geistSans = Geist({
-  variable: "--font-geist-sans",
-  subsets: ["latin"],
-});
-
-const geistMono = Geist_Mono({
-  variable: "--font-geist-mono",
-  subsets: ["latin"],
-});
-
-const syne = Syne({
-  variable: "--font-syne",
-  subsets: ["latin"],
-  weight: ["400", "500", "600", "700", "800"],
-});
-
-const vt323 = VT323({
-  variable: "--font-vt323",
-  subsets: ["latin"],
-  weight: ["400"],
-});
 
 export const metadata: Metadata = {
   metadataBase: new URL(SITE_URL),
@@ -80,7 +57,7 @@ export default function RootLayout({
           }}
         />
       </head>
-      <body className={`${geistSans.variable} ${geistMono.variable} ${syne.variable} ${vt323.variable} antialiased tracking-tight`}>
+      <body className="antialiased tracking-tight">
         <Providers>{children}</Providers>
       </body>
     </html>
