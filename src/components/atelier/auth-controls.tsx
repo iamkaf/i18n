@@ -45,6 +45,13 @@ export function AuthControls() {
   return (
     <div className="flex items-center gap-2">
       <div className="flex items-center gap-2 rounded-lg border border-[var(--atelier-border)] bg-[var(--atelier-surface)] px-2.5 py-1.5 text-xs text-[var(--atelier-muted)]">
+        {user.avatar ? (
+          <img
+            src={user.avatar}
+            alt={`${user.name} avatar`}
+            className="h-5 w-5 rounded-full border border-[var(--atelier-border)] object-cover"
+          />
+        ) : null}
         <span>{user.name}</span>
         {god ? (
           <StatusPill variant="god">god</StatusPill>

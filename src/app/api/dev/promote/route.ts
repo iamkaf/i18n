@@ -1,4 +1,5 @@
-import { GOD_DISCORD_ID, requireSession, upsertUserRole } from "@/lib/session";
+import { GOD_DISCORD_ID } from "@/lib/auth-constants";
+import { requireSession, upsertUserRole } from "@/lib/session";
 
 function forbidden() {
   return Response.json({ error: "Not available" }, { status: 404 });

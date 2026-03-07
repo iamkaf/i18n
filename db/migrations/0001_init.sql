@@ -3,7 +3,7 @@
 -- Notes:
 -- - Uses TEXT timestamps in UTC ISO-ish format via strftime.
 -- - Stores tokens hashed (never store raw PATs).
--- - Targets allow per-version catalogs (e.g. "latest", "1.21.11").
+-- - Each project has one canonical en_us source catalog and approved locale translations.
 
 PRAGMA foreign_keys = ON;
 
@@ -19,33 +19,20 @@ CREATE TABLE IF NOT EXISTS projects (
   modrinth_project_id TEXT,
   modrinth_slug TEXT,
   icon_url TEXT,
+  github_repo_url TEXT,
 
   created_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now')),
   updated_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now'))
 );
+CREATE UNIQUE INDEX IF NOT EXISTS idx_projects_modrinth_project_id_unique
+  ON projects(modrinth_project_id)
+  WHERE modrinth_project_id IS NOT NULL;
 
 -- Targets (translation sets per project)
-CREATE TABLE IF NOT EXISTS targets (
-  id TEXT PRIMARY KEY,
-  project_id TEXT NOT NULL,
-  key TEXT NOT NULL,
-  label TEXT,
-
-  source_revision TEXT,
-  source_hash TEXT,
-
-  created_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now')),
-  updated_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now')),
-
-  FOREIGN KEY (project_id) REFERENCES projects(id) ON DELETE CASCADE,
-  UNIQUE(project_id, key)
-);
-CREATE INDEX IF NOT EXISTS idx_targets_project_id ON targets(project_id);
-
 -- Source strings (canonical en_us + placeholder signature)
 CREATE TABLE IF NOT EXISTS source_strings (
   id TEXT PRIMARY KEY,
-  target_id TEXT NOT NULL,
+  project_id TEXT NOT NULL,
 
   string_key TEXT NOT NULL,
   source_text TEXT NOT NULL,
@@ -57,11 +44,11 @@ CREATE TABLE IF NOT EXISTS source_strings (
   created_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now')),
   updated_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now')),
 
-  FOREIGN KEY (target_id) REFERENCES targets(id) ON DELETE CASCADE,
-  UNIQUE(target_id, string_key)
+  FOREIGN KEY (project_id) REFERENCES projects(id) ON DELETE CASCADE,
+  UNIQUE(project_id, string_key)
 );
-CREATE INDEX IF NOT EXISTS idx_source_strings_target_id ON source_strings(target_id);
-CREATE INDEX IF NOT EXISTS idx_source_strings_target_key ON source_strings(target_id, string_key);
+CREATE INDEX IF NOT EXISTS idx_source_strings_project_id ON source_strings(project_id);
+CREATE INDEX IF NOT EXISTS idx_source_strings_project_key ON source_strings(project_id, string_key);
 
 -- Approved translations (exportable state)
 CREATE TABLE IF NOT EXISTS translations (
@@ -112,9 +99,15 @@ CREATE INDEX IF NOT EXISTS idx_suggestions_locale ON suggestions(locale);
 CREATE TABLE IF NOT EXISTS trusted_users (
   discord_id TEXT PRIMARY KEY,
   display_name TEXT,
+  discord_handle TEXT,
+  avatar_url TEXT,
+  role TEXT NOT NULL DEFAULT 'trusted'
+    CHECK (role IN ('trusted', 'god')),
   added_by_discord_id TEXT,
   added_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now'))
 );
+CREATE INDEX IF NOT EXISTS idx_trusted_users_role ON trusted_users(role);
+CREATE INDEX IF NOT EXISTS idx_trusted_users_discord_handle ON trusted_users(discord_handle);
 
 -- PATs: Authorization: Bearer kaf_<token>
 CREATE TABLE IF NOT EXISTS api_tokens (

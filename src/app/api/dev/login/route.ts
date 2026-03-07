@@ -1,5 +1,6 @@
 import { getEnv } from "@/lib/cf";
-import { GOD_DISCORD_ID, sessionCookie, signSession, upsertUserRole } from "@/lib/session";
+import { GOD_DISCORD_ID } from "@/lib/auth-constants";
+import { sessionCookie, signSession, upsertUserRole } from "@/lib/session";
 
 function forbidden() {
   return Response.json({ error: "Not available" }, { status: 404 });
@@ -24,6 +25,7 @@ export async function GET(req: Request) {
   const url = new URL(req.url);
   const sub = (url.searchParams.get("sub") || "dev-user").trim();
   const name = (url.searchParams.get("name") || "Dev User").trim();
+  const handle = (url.searchParams.get("handle") || "").trim().replace(/^@+/, "") || null;
   const avatar = (url.searchParams.get("avatar") || "").trim() || null;
   const redirectTo = (url.searchParams.get("redirect") || "/").trim() || "/";
   const requestedRole = (url.searchParams.get("role") || "").trim().toLowerCase();
@@ -49,6 +51,8 @@ export async function GET(req: Request) {
       await upsertUserRole({
         discordId: sub,
         displayName: name,
+        discordHandle: handle,
+        avatarUrl: avatar,
         role,
         addedByDiscordId: "dev-login",
       });
@@ -60,7 +64,7 @@ export async function GET(req: Request) {
     }
   }
 
-  const token = await signSession({ sub, name, avatar }, sessionSecret);
+  const token = await signSession({ sub, name, handle, avatar }, sessionSecret);
 
   return new Response(null, {
     status: 302,

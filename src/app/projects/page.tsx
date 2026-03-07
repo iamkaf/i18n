@@ -20,7 +20,9 @@ type Project = {
   default_locale: string;
   icon_url: string | null;
   modrinth_slug: string | null;
-  target_count: number;
+  github_repo_url: string | null;
+  source_string_count: number;
+  has_source_catalog: number;
   updated_at: string;
 };
 
@@ -90,7 +92,7 @@ export default function ProjectsPage() {
       ) : projects.length === 0 ? (
         <EmptyStateCard
           title="No projects found"
-          description="Try a broader search or import a catalog to seed the atelier."
+          description="Try a broader search or import a project shell to seed the atelier."
         />
       ) : (
         <section className="grid md:grid-cols-2 gap-4">
@@ -107,13 +109,16 @@ export default function ProjectsPage() {
                   <span className="rounded-full bg-[#f3f4ff] px-2.5 py-1 text-xs text-[#4d4d6a] dark:bg-white/10 dark:text-white/70">
                     default: {project.default_locale}
                   </span>
-                  <span className="rounded-full bg-[#f3f4ff] px-2.5 py-1 text-xs text-[#4d4d6a] dark:bg-white/10 dark:text-white/70">
-                    targets: {project.target_count}
-                  </span>
+                  <StatusPill variant={project.has_source_catalog ? "approved" : "pending"}>
+                    {project.has_source_catalog ? "source ready" : "metadata only"}
+                  </StatusPill>
                 </div>
                 <div className="text-sm">
                   <div className="mb-1">
                     <span className="text-[var(--atelier-muted)]">slug:</span> {project.slug}
+                  </div>
+                  <div className="mb-1">
+                    <span className="text-[var(--atelier-muted)]">strings:</span> {project.source_string_count}
                   </div>
                   {project.modrinth_slug ? (
                     <div className="mb-1">

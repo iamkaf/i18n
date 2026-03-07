@@ -9,7 +9,9 @@ type ProjectRow = {
   default_locale: string;
   icon_url: string | null;
   modrinth_slug: string | null;
-  target_count: number;
+  github_repo_url: string | null;
+  source_string_count: number;
+  has_source_catalog: number;
   updated_at: string;
 };
 
@@ -39,10 +41,12 @@ export async function GET(req: Request) {
        p.default_locale,
        p.icon_url,
        p.modrinth_slug,
-       p.updated_at,
-       COUNT(t.id) as target_count
+       p.github_repo_url,
+       COUNT(CASE WHEN ss.is_active = 1 THEN 1 END) as source_string_count,
+       CASE WHEN COUNT(CASE WHEN ss.is_active = 1 THEN 1 END) > 0 THEN 1 ELSE 0 END as has_source_catalog,
+       p.updated_at
      FROM projects p
-     LEFT JOIN targets t ON t.project_id = p.id
+     LEFT JOIN source_strings ss ON ss.project_id = p.id
      ${whereSql}
      GROUP BY p.id
      ORDER BY p.updated_at DESC, p.slug ASC`,

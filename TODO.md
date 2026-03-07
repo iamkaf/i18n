@@ -19,23 +19,11 @@
 - [ ] Seed additional trusted moderator Discord IDs as needed
 - [ ] Create at least one API token (`npm run token:new`)
 
-## Frontend
-
-- [x] Login / logout UI (call `/api/auth/discord`, show user from `/api/auth/me`)
-- [x] Project browser (list projects from DB)
-- [x] Suggestion submission form wired to `POST /api/suggestions` with placeholder mismatch + rate-limit feedback
-- [x] Suggestion editing/withdraw controls for author (`PATCH`/`DELETE /api/suggestions/[id]`)
-- [x] Suggestion list view (filter by status/locale/project)
-- [x] Moderation panel (approve/reject with decision note)
-- [x] Auth-aware route guards and empty states for private project views
-- [x] Surface submission outcomes in UI copy/toasts (accepted/rejected/rate-limited)
-- [x] God-only user management view and Discord ID-based management routes
-
 ## Pages
 
-- [x] Project details route (`/projects/[slug]`) with target list from `/api/projects/[slug]/targets`
-- [x] Source string viewer route (`/projects/[slug]/[target]`) with pagination/search/locale
-- [x] Translation progress indicators per locale from `/api/projects/[slug]/[target]/progress`
+- [x] Project browser (`/projects`)
+- [x] Unified project workbench (`/projects/[slug]`)
+- [x] Project-level string browsing, progress, and suggestion composer
 - [x] Contributor history route (`/suggestions`)
 - [x] Moderator queue route (`/moderation`)
 - [x] God-only user management route (`/users`)
@@ -46,10 +34,12 @@
 - [x] `DELETE /api/suggestions/[id]` — withdraw pending suggestion (author only)
 - [x] `GET /api/projects` — list projects (public visibility)
 - [x] `GET /api/projects/[slug]` — project detail
-- [x] `GET /api/projects/[slug]/targets` — list targets for a project
-- [x] `GET /api/projects/[slug]/[target]/strings` — paginated source strings
-- [x] `GET /api/projects/[slug]/[target]/progress` — translation coverage per locale
+- [x] `GET /api/projects/[slug]/strings` — paginated project-scoped source strings
+- [x] `GET /api/projects/[slug]/progress` — project-scoped translation coverage per locale
+- [x] `GET /api/projects/[slug]/imports/discovery` — GitHub locale-file discovery
+- [x] `POST /api/projects/[slug]/imports` — import canonical source or approved translations
 - [x] `GET /api/suggestions` — filtered suggestion lists for contributors and moderators
+- [x] `GET /api/export/[project]/[locale]` — project-level export with English fallback
 - [x] `GET /api/users` — god-only elevated-user listing
 - [x] `PATCH /api/users/[discordId]` — god-only role updates by Discord ID
 - [x] `DELETE /api/users/[discordId]` — god-only demotion by Discord ID
@@ -59,11 +49,12 @@
 ## Modrinth integration
 
 - [x] Fetch a Modrinth user’s mod projects via `GET /api/modrinth/projects?username=...`
-- [ ] Add a frontend importer flow on top of the Modrinth project lookup
-- [ ] Let a selected Modrinth project prefill slug, title, icon, and Modrinth linkage during import
-- [ ] Decide whether target creation should be derived from Modrinth versions or remain explicit during catalog upload
-- [ ] Keep Modrinth integration metadata-only unless there is a reliable source-catalog ingestion path
-- [ ] Document the exact boundary: Modrinth helps discover project metadata; catalogs still come from the mod source/build pipeline
+- [x] Add a frontend importer flow on top of the Modrinth project lookup
+- [x] Let a selected Modrinth project prefill slug, title, icon, and Modrinth linkage during import
+- [x] Allow manual GitHub repo URL overrides during import/project editing
+- [x] Keep Modrinth integration metadata-only
+- [x] Use GitHub discovery for locale JSON imports instead of target suggestions
+- [ ] Add richer import result history/audit UI if we need to inspect past syncs
 
 ## Polish
 
@@ -71,5 +62,6 @@
 - [x] Toast notifications
 - [x] Mobile-responsive layout
 - [x] Dark mode
+- [ ] Better bulk import UX for many locale files at once
 - [ ] CI pipeline (typecheck + lint + test on push)
 - [ ] Deploy pipeline (wrangler deploy on merge to main)

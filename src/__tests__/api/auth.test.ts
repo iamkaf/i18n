@@ -1,19 +1,23 @@
-import { describe, it, expect, vi } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { signSession } from "@/lib/session";
 
 vi.mock("@/lib/cf", () => ({
   getEnv: () => ({ SESSION_SECRET: "test-secret-1234567890abcdef" }),
 }));
 
+const mockDbFirst = vi.fn();
+const mockDbAll = vi.fn();
+const mockDbRun = vi.fn();
+
 vi.mock("@/lib/db", () => ({
-  dbFirst: vi.fn(),
-  dbAll: vi.fn(),
-  dbRun: vi.fn(),
+  dbFirst: (...args: unknown[]) => mockDbFirst(...args),
+  dbAll: (...args: unknown[]) => mockDbAll(...args),
+  dbRun: (...args: unknown[]) => mockDbRun(...args),
   getDB: vi.fn(),
 }));
 
 const SECRET = "test-secret-1234567890abcdef";
-const USER = { sub: "111222333", name: "DiscordUser", avatar: null };
+const USER = { sub: "111222333", name: "DiscordUser", handle: "discord-user", avatar: null };
 
 describe("GET /api/auth/me", () => {
   it("returns { user: null } without cookie", async () => {
@@ -36,6 +40,7 @@ describe("GET /api/auth/me", () => {
     const json = (await res.json()) as any;
     expect(json.user?.sub).toBe(USER.sub);
     expect(json.user?.name).toBe(USER.name);
+    expect(json.user?.handle).toBe(USER.handle);
   });
 });
 

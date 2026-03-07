@@ -1,0 +1,1 @@
+export const GOD_DISCORD_ID = "517599684961894400";

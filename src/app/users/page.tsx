@@ -8,10 +8,12 @@ import { ErrorStateCard } from "@/components/atelier/error-state-card";
 import { FilterToolbar } from "@/components/atelier/filter-toolbar";
 import { Input } from "@/components/ui/input";
 import { LockedStateCard } from "@/components/atelier/locked-state-card";
+import { ModrinthImporter } from "@/components/atelier/modrinth-importer";
 import { SectionHeading } from "@/components/atelier/section-heading";
 import { StatusPill } from "@/components/atelier/status-pill";
 import { Button } from "@/components/ui/button";
 import { ApiError, apiJson, getErrorMessage } from "@/lib/api";
+import { GOD_DISCORD_ID } from "@/lib/auth-constants";
 import { useSession } from "@/lib/use-session";
 
 type UserRole = "trusted" | "god";
@@ -20,6 +22,7 @@ type ManagedUser = {
   discord_id: string;
   display_name: string | null;
   discord_handle: string | null;
+  avatar_url: string | null;
   role: UserRole;
   added_by_discord_id: string | null;
   added_at: string;
@@ -82,6 +85,8 @@ export default function UsersPage() {
         />
       ) : (
         <div className="grid gap-6">
+          <ModrinthImporter />
+
           <section className="atelier-card p-5">
             <h3 className="text-sm font-semibold uppercase tracking-[0.14em] text-[var(--atelier-muted)]">
               Grant role
@@ -206,108 +211,136 @@ export default function UsersPage() {
             />
           ) : (
             <div className="grid gap-4">
-              {users.map((entry) => (
-                <article key={entry.discord_id} className="atelier-card p-5">
-                  <div className="flex flex-wrap items-start justify-between gap-4">
-                    <div>
-                      <div className="font-mono text-sm text-[var(--atelier-highlight)]">
-                        {entry.discord_id}
+              {users.map((entry) => {
+                const isConfiguredGod = entry.discord_id === GOD_DISCORD_ID;
+                const isCurrentUser = user?.sub === entry.discord_id;
+                const displayName =
+                  entry.display_name ||
+                  (isCurrentUser ? user.name : null) ||
+                  (isConfiguredGod ? "Configured god account" : "Unnamed user");
+                const handle = entry.discord_handle || (isCurrentUser ? user.handle : null);
+                const avatarUrl = entry.avatar_url || (isCurrentUser ? user.avatar : null);
+                const handleText = handle ? `@${handle}` : "not set";
+
+                return (
+                  <article key={entry.discord_id} className="atelier-card p-5">
+                    <div className="flex flex-wrap items-start justify-between gap-4">
+                      <div className="flex items-start gap-4">
+                        {avatarUrl ? (
+                          <img
+                            src={avatarUrl}
+                            alt={`${displayName} avatar`}
+                            className="mt-0.5 h-14 w-14 rounded-2xl border border-[var(--atelier-border)] object-cover"
+                          />
+                        ) : (
+                          <div className="mt-0.5 flex h-14 w-14 items-center justify-center rounded-2xl border border-[var(--atelier-border)] bg-[var(--atelier-surface-soft)] text-lg font-semibold text-[var(--atelier-muted)]">
+                            {displayName.charAt(0).toUpperCase()}
+                          </div>
+                        )}
+                        <div>
+                        <div className="font-mono text-sm text-[var(--atelier-highlight)]">
+                          {entry.discord_id}
+                        </div>
+                        <h3 className="mt-2 text-base font-semibold">{displayName}</h3>
+                        <div className="mt-1 text-sm text-[var(--atelier-muted)]">
+                          Handle: {handleText}
+                        </div>
+                        <div className="mt-2 text-sm text-[var(--atelier-muted)]">
+                          {isConfiguredGod
+                            ? "Role is reserved in code for the configured Discord account."
+                            : `added by ${entry.added_by_discord_id || "system"}${entry.added_at ? ` on ${new Date(entry.added_at).toLocaleString()}` : ""}`}
+                        </div>
+                        </div>
                       </div>
-                      <h3 className="mt-2 text-base font-semibold">
-                        {entry.display_name || "Unnamed user"}
-                      </h3>
-                      <div className="mt-1 text-sm text-[var(--atelier-muted)]">
-                        Handle: {entry.discord_handle ? `@${entry.discord_handle}` : "not set"}
-                      </div>
-                      <div className="mt-2 text-sm text-[var(--atelier-muted)]">
-                        added by {entry.added_by_discord_id || "system"}
-                        {entry.added_at ? ` on ${new Date(entry.added_at).toLocaleString()}` : ""}
+                      <div className="flex items-center gap-2">
+                        <StatusPill variant={entry.role === "god" ? "god" : "trusted"}>
+                          {entry.role}
+                        </StatusPill>
                       </div>
                     </div>
-                    <div className="flex items-center gap-2">
-                      <StatusPill variant={entry.role === "god" ? "god" : "trusted"}>
-                        {entry.role}
-                      </StatusPill>
-                    </div>
-                  </div>
-                  <div className="mt-4 flex flex-wrap items-center gap-3">
-                    <select
-                      aria-label={`Role for ${entry.discord_id}`}
-                      value={entry.role}
-                      onChange={(event) => {
-                        const nextRole = event.target.value as UserRole;
-                        setUsers((current) =>
-                          current.map((currentEntry) =>
-                            currentEntry.discord_id === entry.discord_id
-                              ? { ...currentEntry, role: nextRole }
-                              : currentEntry,
-                          ),
-                        );
-                      }}
-                      disabled={entry.role === "god" && entry.discord_id === "517599684961894400"}
-                      className="atelier-ring h-9 min-w-[140px] rounded-md border border-[var(--atelier-border)] bg-[var(--atelier-surface-soft)] px-3 text-sm"
-                    >
-                      <option value="trusted">trusted</option>
-                      <option value="god">god</option>
-                    </select>
-                    <Button
-                      variant="outline"
-                      onClick={async () => {
-                        const current = users.find(
-                          (currentEntry) => currentEntry.discord_id === entry.discord_id,
-                        );
-                        if (!current) return;
-                        setSavingId(entry.discord_id);
-                        try {
-                          await apiJson(`/api/users/${entry.discord_id}`, {
-                            method: "PATCH",
-                            body: JSON.stringify({
-                              display_name: current.display_name,
-                              discord_handle: current.discord_handle,
-                              role: current.role,
-                            }),
-                          });
-                          sileo.success({ title: "Role updated", description: entry.discord_id });
-                          await loadUsers();
-                        } catch (saveError) {
-                          sileo.error({
-                            title: "Update failed",
-                            description: getErrorMessage(saveError),
-                          });
-                        } finally {
-                          setSavingId(null);
-                        }
-                      }}
-                      disabled={savingId === entry.discord_id}
-                    >
-                      {savingId === entry.discord_id ? "Saving..." : "Update"}
-                    </Button>
-                    <Button
-                      variant="outline"
-                      onClick={async () => {
-                        setSavingId(entry.discord_id);
-                        try {
-                          await apiJson(`/api/users/${entry.discord_id}`, { method: "DELETE" });
-                          sileo.success({ title: "User demoted", description: entry.discord_id });
-                          await loadUsers();
-                        } catch (saveError) {
-                          sileo.error({
-                            title: "Demotion failed",
-                            description: getErrorMessage(saveError),
-                          });
-                        } finally {
-                          setSavingId(null);
-                        }
-                      }}
-                      disabled={
-                        entry.discord_id === "517599684961894400" || savingId === entry.discord_id
-                      }
-                    >
-                      Demote
-                    </Button>
-                  </div>
-                </article>
-              ))}
+                    {isConfiguredGod ? (
+                      <div className="mt-4 rounded-xl border border-[var(--atelier-border)] bg-[var(--atelier-surface-soft)] px-4 py-3 text-sm text-[var(--atelier-muted)]">
+                        This account is bound to the hardcoded god Discord ID and cannot be edited
+                        or demoted here.
+                      </div>
+                    ) : (
+                      <div className="mt-4 flex flex-wrap items-center gap-3">
+                        <select
+                          aria-label={`Role for ${entry.discord_id}`}
+                          value={entry.role}
+                          onChange={(event) => {
+                            const nextRole = event.target.value as UserRole;
+                            setUsers((current) =>
+                              current.map((currentEntry) =>
+                                currentEntry.discord_id === entry.discord_id
+                                  ? { ...currentEntry, role: nextRole }
+                                  : currentEntry,
+                              ),
+                            );
+                          }}
+                          className="atelier-ring h-9 min-w-[140px] rounded-md border border-[var(--atelier-border)] bg-[var(--atelier-surface-soft)] px-3 text-sm"
+                        >
+                          <option value="trusted">trusted</option>
+                          <option value="god">god</option>
+                        </select>
+                        <Button
+                          variant="outline"
+                          onClick={async () => {
+                            const current = users.find(
+                              (currentEntry) => currentEntry.discord_id === entry.discord_id,
+                            );
+                            if (!current) return;
+                            setSavingId(entry.discord_id);
+                            try {
+                              await apiJson(`/api/users/${entry.discord_id}`, {
+                                method: "PATCH",
+                                body: JSON.stringify({
+                                  display_name: current.display_name,
+                                  discord_handle: current.discord_handle,
+                                  role: current.role,
+                                }),
+                              });
+                              sileo.success({ title: "Role updated", description: entry.discord_id });
+                              await loadUsers();
+                            } catch (saveError) {
+                              sileo.error({
+                                title: "Update failed",
+                                description: getErrorMessage(saveError),
+                              });
+                            } finally {
+                              setSavingId(null);
+                            }
+                          }}
+                          disabled={savingId === entry.discord_id}
+                        >
+                          {savingId === entry.discord_id ? "Saving..." : "Update"}
+                        </Button>
+                        <Button
+                          variant="outline"
+                          onClick={async () => {
+                            setSavingId(entry.discord_id);
+                            try {
+                              await apiJson(`/api/users/${entry.discord_id}`, { method: "DELETE" });
+                              sileo.success({ title: "User demoted", description: entry.discord_id });
+                              await loadUsers();
+                            } catch (saveError) {
+                              sileo.error({
+                                title: "Demotion failed",
+                                description: getErrorMessage(saveError),
+                              });
+                            } finally {
+                              setSavingId(null);
+                            }
+                          }}
+                          disabled={savingId === entry.discord_id}
+                        >
+                          Demote
+                        </Button>
+                      </div>
+                    )}
+                  </article>
+                );
+              })}
             </div>
           )}
         </div>

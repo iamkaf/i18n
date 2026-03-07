@@ -67,8 +67,7 @@ describe("POST /api/suggestions/[id]/approve", () => {
 
   it("returns 404 if suggestion missing", async () => {
     const { POST } = await import("@/app/api/suggestions/[id]/approve/route");
-    // First call: trusted_users → trusted; second call: suggestion → null
-    mockDbFirst.mockResolvedValueOnce({ discord_id: SESSION.sub }).mockResolvedValueOnce(null);
+    mockDbFirst.mockResolvedValueOnce({ role: "trusted" }).mockResolvedValueOnce(null);
     const req = await makeRequest("http://localhost/api/suggestions/missing/approve", SESSION, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -81,7 +80,7 @@ describe("POST /api/suggestions/[id]/approve", () => {
   it("returns 409 if suggestion is not pending", async () => {
     const { POST } = await import("@/app/api/suggestions/[id]/approve/route");
     mockDbFirst
-      .mockResolvedValueOnce({ discord_id: SESSION.sub })
+      .mockResolvedValueOnce({ role: "trusted" })
       .mockResolvedValueOnce({ ...PENDING_SUGGESTION, status: "accepted" });
     const req = await makeRequest("http://localhost/api/suggestions/sug1/approve", SESSION, {
       method: "POST",
@@ -95,7 +94,7 @@ describe("POST /api/suggestions/[id]/approve", () => {
   it("returns 200 and upserts translation on success", async () => {
     const { POST } = await import("@/app/api/suggestions/[id]/approve/route");
     mockDbFirst
-      .mockResolvedValueOnce({ discord_id: SESSION.sub })
+      .mockResolvedValueOnce({ role: "trusted" })
       .mockResolvedValueOnce(PENDING_SUGGESTION);
     const req = await makeRequest("http://localhost/api/suggestions/sug1/approve", SESSION, {
       method: "POST",
@@ -136,7 +135,7 @@ describe("POST /api/suggestions/[id]/reject", () => {
   it("returns 400 if decision_note is missing", async () => {
     const { POST } = await import("@/app/api/suggestions/[id]/reject/route");
     mockDbFirst
-      .mockResolvedValueOnce({ discord_id: SESSION.sub })
+      .mockResolvedValueOnce({ role: "trusted" })
       .mockResolvedValueOnce(PENDING_SUGGESTION);
     const req = await makeRequest("http://localhost/api/suggestions/sug1/reject", SESSION, {
       method: "POST",
@@ -150,7 +149,7 @@ describe("POST /api/suggestions/[id]/reject", () => {
   it("returns 200 on success", async () => {
     const { POST } = await import("@/app/api/suggestions/[id]/reject/route");
     mockDbFirst
-      .mockResolvedValueOnce({ discord_id: SESSION.sub })
+      .mockResolvedValueOnce({ role: "trusted" })
       .mockResolvedValueOnce(PENDING_SUGGESTION);
     const req = await makeRequest("http://localhost/api/suggestions/sug1/reject", SESSION, {
       method: "POST",

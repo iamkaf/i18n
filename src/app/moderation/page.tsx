@@ -25,7 +25,6 @@ type Suggestion = {
   status: "pending" | "accepted" | "rejected";
   created_at: string;
   project_slug: string;
-  target_key: string;
   decision_note: string | null;
   source_string: {
     id: string;
@@ -45,7 +44,6 @@ export default function ModerationPage() {
   const [status, setStatus] = useState("pending");
   const [locale, setLocale] = useState("");
   const [project, setProject] = useState("");
-  const [target, setTarget] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [decision, setDecision] = useState<{
@@ -67,7 +65,6 @@ export default function ModerationPage() {
       });
       if (locale.trim()) params.set("locale", locale.trim().toLowerCase());
       if (project.trim()) params.set("project", project.trim());
-      if (target.trim()) params.set("target", target.trim());
 
       try {
         const data = await apiJson<{ suggestions: Suggestion[]; total: number; page: number }>(
@@ -94,7 +91,7 @@ export default function ModerationPage() {
     return () => {
       alive = false;
     };
-  }, [limit, locale, page, project, status, target, trusted, user]);
+  }, [limit, locale, page, project, status, trusted, user]);
 
   return (
     <AppShell currentHref="/moderation">
@@ -158,19 +155,6 @@ export default function ModerationPage() {
                   setPage(0);
                 }}
                 placeholder="demo-mod"
-              />
-            </label>
-            <label className="block min-w-[180px] flex-1">
-              <span className="mb-1.5 block text-xs uppercase tracking-[0.15em] text-[var(--atelier-muted)]">
-                Target
-              </span>
-              <Input
-                value={target}
-                onChange={(event) => {
-                  setTarget(event.target.value);
-                  setPage(0);
-                }}
-                placeholder="latest"
               />
             </label>
           </FilterToolbar>
@@ -245,7 +229,6 @@ export default function ModerationPage() {
                       <div>author: {suggestion.author_name || suggestion.author_discord_id}</div>
                       <div className="mt-1">locale: {suggestion.locale}</div>
                       <div className="mt-1">project: {suggestion.project_slug}</div>
-                      <div className="mt-1">target: {suggestion.target_key}</div>
                       <div className="mt-1">
                         submitted: {new Date(suggestion.created_at).toLocaleString()}
                       </div>

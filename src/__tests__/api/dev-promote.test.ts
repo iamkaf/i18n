@@ -52,6 +52,8 @@ describe("GET /api/dev/promote", () => {
     expect(mockDbRun).toHaveBeenCalledWith(expect.any(String), [
       "user-123",
       "User Name",
+      null,
+      null,
       "trusted",
       "dev-promote",
     ]);

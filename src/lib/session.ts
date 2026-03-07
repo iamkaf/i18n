@@ -1,14 +1,15 @@
 import { getEnv } from "@/lib/cf";
 import { dbAll, dbFirst, dbRun } from "@/lib/db";
+import { GOD_DISCORD_ID } from "@/lib/auth-constants";
 
 export type SessionPayload = {
   sub: string;
   name: string;
+  handle?: string | null;
   avatar: string | null;
 };
 
 export type UserRole = "user" | "trusted" | "god";
-export const GOD_DISCORD_ID = "517599684961894400";
 
 export type SessionState = {
   user: SessionPayload | null;
@@ -81,6 +82,7 @@ export async function verifySession(token: string, secret: string): Promise<Sess
   return {
     sub: claims.sub,
     name: claims.name,
+    handle: typeof claims.handle === "string" ? claims.handle : null,
     avatar: typeof claims.avatar === "string" ? claims.avatar : null,
   };
 }
@@ -193,6 +195,7 @@ export async function upsertUserRole(input: {
   discordId: string;
   displayName?: string | null;
   discordHandle?: string | null;
+  avatarUrl?: string | null;
   role: Exclude<UserRole, "user">;
   addedByDiscordId: string;
 }): Promise<void> {
@@ -201,19 +204,48 @@ export async function upsertUserRole(input: {
   }
 
   await dbRun(
-    `INSERT INTO trusted_users (discord_id, display_name, discord_handle, role, added_by_discord_id)
-     VALUES (?, ?, ?, ?, ?)
+    `INSERT INTO trusted_users (discord_id, display_name, discord_handle, avatar_url, role, added_by_discord_id)
+     VALUES (?, ?, ?, ?, ?, ?)
      ON CONFLICT(discord_id) DO UPDATE SET
        display_name = excluded.display_name,
        discord_handle = excluded.discord_handle,
+       avatar_url = excluded.avatar_url,
        role = excluded.role,
        added_by_discord_id = excluded.added_by_discord_id`,
     [
       input.discordId,
       input.displayName ?? null,
       input.discordHandle ?? null,
+      input.avatarUrl ?? null,
       input.role,
       input.addedByDiscordId,
+    ],
+  );
+}
+
+export async function syncElevatedUserProfile(input: {
+  discordId: string;
+  displayName?: string | null;
+  discordHandle?: string | null;
+  avatarUrl?: string | null;
+}): Promise<void> {
+  const role = await getUserRole(input.discordId);
+  if (role === "user") return;
+
+  await dbRun(
+    `INSERT INTO trusted_users (discord_id, display_name, discord_handle, avatar_url, role, added_by_discord_id)
+     VALUES (?, ?, ?, ?, ?, NULL)
+     ON CONFLICT(discord_id) DO UPDATE SET
+       display_name = excluded.display_name,
+       discord_handle = excluded.discord_handle,
+       avatar_url = excluded.avatar_url,
+       role = excluded.role`,
+    [
+      input.discordId,
+      input.displayName ?? null,
+      input.discordHandle ?? null,
+      input.avatarUrl ?? null,
+      role,
     ],
   );
 }
@@ -229,6 +261,7 @@ export type ManagedUser = {
   discord_id: string;
   display_name: string | null;
   discord_handle: string | null;
+  avatar_url: string | null;
   role: Exclude<UserRole, "user">;
   added_by_discord_id: string | null;
   added_at: string;
@@ -237,6 +270,7 @@ export type ManagedUser = {
 export async function listManagedUsers(input?: {
   search?: string;
   role?: Exclude<UserRole, "user"> | "all";
+  godDisplayName?: string | null;
 }): Promise<ManagedUser[]> {
   const params: unknown[] = [];
   const conditions: string[] = [];
@@ -259,7 +293,7 @@ export async function listManagedUsers(input?: {
   let rows: ManagedUser[];
   try {
     rows = await dbAll<ManagedUser>(
-      `SELECT discord_id, display_name, discord_handle, role, added_by_discord_id, added_at
+      `SELECT discord_id, display_name, discord_handle, avatar_url, role, added_by_discord_id, added_at
        FROM trusted_users
        ${where}
        ORDER BY CASE role WHEN 'god' THEN 0 ELSE 1 END,
@@ -285,7 +319,7 @@ export async function listManagedUsers(input?: {
     const legacyRoleWhere =
       input?.role && input.role !== "all" && input.role !== "trusted" ? "WHERE 1 = 0" : legacyWhere;
     rows = await dbAll<ManagedUser>(
-      `SELECT discord_id, display_name, NULL AS discord_handle, 'trusted' AS role, added_by_discord_id, added_at
+      `SELECT discord_id, display_name, NULL AS discord_handle, NULL AS avatar_url, 'trusted' AS role, added_by_discord_id, added_at
        FROM trusted_users
        ${legacyRoleWhere}
        ORDER BY COALESCE(display_name, discord_id)`,
@@ -299,10 +333,11 @@ export async function listManagedUsers(input?: {
   if (!includesGod && matchesGodRole && matchesGodSearch) {
     rows.unshift({
       discord_id: GOD_DISCORD_ID,
-      display_name: null,
+      display_name: input?.godDisplayName?.trim() || null,
       discord_handle: null,
+      avatar_url: null,
       role: "god",
-      added_by_discord_id: "system",
+      added_by_discord_id: null,
       added_at: "",
     });
   }

@@ -36,7 +36,12 @@ describe("UsersPage", () => {
 
   it("renders managed users for the god account", async () => {
     mockUseSession.mockReturnValue({
-      user: { sub: "517599684961894400", name: "Kaf", avatar: null },
+      user: {
+        sub: "517599684961894400",
+        name: "Kaf",
+        handle: "iamkaf",
+        avatar: "https://cdn.example/kaf.png",
+      },
       god: true,
       trusted: true,
       role: "god",
@@ -54,6 +59,7 @@ describe("UsersPage", () => {
                   discord_id: "517599684961894400",
                   display_name: "Kaf",
                   discord_handle: "kaf",
+                  avatar_url: "https://cdn.example/kaf.png",
                   role: "god",
                   added_by_discord_id: "system",
                   added_at: "2026-03-07T00:00:00.000Z",
@@ -72,5 +78,12 @@ describe("UsersPage", () => {
       expect(screen.getByText("Kaf")).toBeTruthy();
       expect(screen.getByText("Handle: @kaf")).toBeTruthy();
     });
+
+    expect(screen.getByRole("img")).toBeTruthy();
+
+    expect(
+      screen.getByText("This account is bound to the hardcoded god Discord ID and cannot be edited or demoted here."),
+    ).toBeTruthy();
+    expect(screen.queryByRole("button", { name: "Update" })).toBeNull();
   });
 });

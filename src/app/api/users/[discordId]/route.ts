@@ -1,5 +1,5 @@
+import { GOD_DISCORD_ID } from "@/lib/auth-constants";
 import {
-  GOD_DISCORD_ID,
   getUserRole,
   listManagedUsers,
   removeUserRole,

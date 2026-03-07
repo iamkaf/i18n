@@ -1,5 +1,6 @@
-import { describe, it, expect, vi } from "vitest";
-import { signSession, verifySession, getSession } from "@/lib/session";
+import { beforeEach, describe, expect, it, vi } from "vitest";
+import { GOD_DISCORD_ID } from "@/lib/auth-constants";
+import { getSession, signSession, syncElevatedUserProfile, verifySession } from "@/lib/session";
 
 // Mock getEnv so session.ts can resolve SESSION_SECRET without Cloudflare context
 vi.mock("@/lib/cf", () => ({
@@ -7,15 +8,23 @@ vi.mock("@/lib/cf", () => ({
 }));
 
 // Mock dbFirst for requireTrustedSession (not tested here, just prevent errors)
+const mockDbFirst = vi.fn();
+const mockDbAll = vi.fn();
+const mockDbRun = vi.fn();
+
 vi.mock("@/lib/db", () => ({
-  dbFirst: vi.fn(),
-  dbAll: vi.fn(),
-  dbRun: vi.fn(),
+  dbFirst: (...args: unknown[]) => mockDbFirst(...args),
+  dbAll: (...args: unknown[]) => mockDbAll(...args),
+  dbRun: (...args: unknown[]) => mockDbRun(...args),
   getDB: vi.fn(),
 }));
 
 const SECRET = "test-secret-1234567890abcdef";
-const PAYLOAD = { sub: "123456789", name: "TestUser", avatar: null };
+const PAYLOAD = { sub: "123456789", name: "TestUser", handle: "test-user", avatar: null };
+
+beforeEach(() => {
+  vi.clearAllMocks();
+});
 
 describe("signSession + verifySession", () => {
   it("round-trips a payload", async () => {
@@ -94,5 +103,31 @@ describe("getSession", () => {
     });
     const result = await getSession(req);
     expect(result).toBeNull();
+  });
+});
+
+describe("syncElevatedUserProfile", () => {
+  it("skips regular users", async () => {
+    mockDbFirst.mockResolvedValueOnce(null);
+    await syncElevatedUserProfile({
+      discordId: "123456789",
+      displayName: "Regular",
+      discordHandle: "regular",
+      avatarUrl: "https://cdn.example/avatar.png",
+    });
+    expect(mockDbRun).not.toHaveBeenCalled();
+  });
+
+  it("upserts the configured god user profile", async () => {
+    await syncElevatedUserProfile({
+      discordId: GOD_DISCORD_ID,
+      displayName: "Kaf",
+      discordHandle: "iamkaf",
+      avatarUrl: "https://cdn.example/kaf.png",
+    });
+    expect(mockDbRun).toHaveBeenCalledWith(
+      expect.stringContaining("avatar_url"),
+      [GOD_DISCORD_ID, "Kaf", "iamkaf", "https://cdn.example/kaf.png", "god"],
+    );
   });
 });

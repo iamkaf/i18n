@@ -45,7 +45,7 @@ describe("GET /api/dev/login", () => {
       decodeURIComponent(cookieValue as string),
       "test-secret-1234567890abcdef",
     );
-    expect(payload).toEqual({ sub: "dev1", name: "Dev User", avatar: null });
+    expect(payload).toEqual({ sub: "dev1", name: "Dev User", handle: null, avatar: null });
   });
 
   it("upserts trusted users when requested", async () => {

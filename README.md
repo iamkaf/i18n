@@ -7,7 +7,10 @@ It is **not** a platform, **not** a SaaS, and **not** a general-purpose service.
 
 ## What it does
 
-- Contributors can suggest translations (Discord login required).
+- Each project has one canonical `en_us` source catalog.
+- Approved locale translations are stored at the project level on top of that source catalog.
+- God users can import `en_us` and additional locale JSON files from GitHub or manual upload.
+- Contributors can suggest translation changes (Discord login required).
 - Contributors can edit or withdraw their own pending suggestions.
 - Trusted translators can approve/reject suggestions from a moderation queue.
 - A single hardcoded Discord account is the `god` user and can manage elevated users by Discord ID.
@@ -17,8 +20,7 @@ It is **not** a platform, **not** a SaaS, and **not** a general-purpose service.
   - **Private** exports require a PAT.
 - The frontend already includes:
   - `/projects` project browser
-  - `/projects/[slug]` project detail
-  - `/projects/[slug]/[target]` translation workbench
+  - `/projects/[slug]` unified project workbench
   - `/suggestions` contributor history
   - `/moderation` moderator queue
   - `/users` god-only user management
@@ -65,39 +67,43 @@ Two ways to bring mods/strings into the atelier:
 
 Implemented. For automation and CI.
 
-- Upsert a project + target (ex: `1.21.11` or `latest`)
-- Upload a source catalog (`en_us` strings + optional context)
+- Upsert a project shell plus locale catalog
+- `locale=en_us` updates the canonical source catalog immediately
+- Any other locale updates approved translations immediately
 - Route: `POST /api/catalogs/upsert`
 - Requires PAT scope: `catalog:write`
 
 ### 2) UI importer (convenience)
 
-Partially implemented. For onboarding projects via discovery.
+Implemented. For onboarding projects via discovery.
 
-- Uses the Modrinth API to list projects and import metadata.
-- Current route: `GET /api/modrinth/projects?username=<modrinth-user>`
-- Current scope: discovery only. It returns mod metadata for a Modrinth user and filters to `project_type === "mod"`.
-- It does **not** ingest source catalogs from Modrinth, create targets automatically, or make a project exportable by itself.
-- A catalog upload/push is still required to populate strings.
+- `/users` can import project metadata from Modrinth and store optional GitHub linkage.
+- `/projects/[slug]` can discover locale JSON files from the linked GitHub repo.
+- `en_us.json` imports become the canonical source of truth immediately.
+- Additional locale files like `zh_cn.json` import directly as approved translations.
+- Modrinth remains metadata/discovery only. It does not provide the source catalog.
 
 ## Export
 
 Build systems consume approved translations via HTTP:
 
-- `GET /api/export/<mod>/<target>/<locale>`
+- `GET /api/export/<project>/<locale>`
 
 Rules:
 
 - Public project → anonymous read allowed
 - Private project → requires `Authorization: Bearer kaf_<token>`
 
+Export behavior:
+
+- `en_us` exports canonical source text
+- other locales export approved translations with English fallback for missing keys
+
 ## Database (D1)
 
 Schema lives in:
 
 - `db/migrations/0001_init.sql`
-- `db/migrations/0002_user_roles.sql`
-- `db/seed.sql`
 
 Token helper:
 
@@ -161,5 +167,6 @@ npm run cf-typegen
 - Multi-tenant features
 - Org/team management
 - Generic “translation platform” ambitions
+- Per-version or per-target translation sets
 
 If it doesn’t serve the atelier, it doesn’t ship.

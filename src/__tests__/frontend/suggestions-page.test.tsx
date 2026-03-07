@@ -51,7 +51,6 @@ describe("Suggestions page", () => {
               status: "pending",
               created_at: "2026-01-01T00:00:00.000Z",
               project_slug: "demo-mod",
-              target_key: "latest",
               decision_note: null,
               decided_at: null,
               decided_by_discord_id: null,
@@ -68,15 +67,12 @@ describe("Suggestions page", () => {
           page: 0,
         });
       }
-
       if (input === "/api/suggestions/sug1" && init?.method === "DELETE") {
         return Promise.resolve({ ok: true });
       }
-
       if (input === "/api/suggestions/sug1" && init?.method === "PATCH") {
         return Promise.resolve({ ok: true });
       }
-
       throw new Error(`Unexpected apiJson call: ${input}`);
     });
 
@@ -90,6 +86,7 @@ describe("Suggestions page", () => {
     await waitFor(() => {
       expect(screen.getByText("No suggestions in this slice")).toBeTruthy();
     });
+    expect(screen.queryByText(/^target:/i)).toBeNull();
     expect(mockSuccess).toHaveBeenCalled();
   });
 });

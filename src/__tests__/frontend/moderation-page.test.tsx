@@ -51,7 +51,6 @@ describe("Moderation page", () => {
               status: "pending",
               created_at: "2026-01-01T00:00:00.000Z",
               project_slug: "demo-mod",
-              target_key: "latest",
               decision_note: null,
               source_string: {
                 id: "ss1",
@@ -92,6 +91,7 @@ describe("Moderation page", () => {
     await waitFor(() => {
       expect(screen.getByText("No suggestions in this queue")).toBeTruthy();
     });
+    expect(screen.queryByText(/^target:/i)).toBeNull();
     expect(mockSuccess).toHaveBeenCalled();
   });
 });

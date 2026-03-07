@@ -1,11 +1,10 @@
-import { requireSession } from "@/lib/session";
+import { requireSession, requireTrustedSession } from "@/lib/session";
 import { dbFirst, dbAll, dbRun } from "@/lib/db";
 import { computePlaceholderSig } from "@/lib/placeholders";
 import { getEnv } from "@/lib/cf";
 
 type SourceStringRow = {
   id: string;
-  target_id: string;
   string_key: string;
   source_text: string;
   context: string | null;
@@ -15,7 +14,6 @@ type SourceStringRow = {
 
 type SuggestionWebhookRow = {
   project_slug: string;
-  target_key: string;
   string_key: string;
 };
 
@@ -37,10 +35,9 @@ async function sendSuggestionWebhook(input: {
   if (!webhookUrl) return;
 
   const ref = await dbFirst<SuggestionWebhookRow>(
-    `SELECT p.slug as project_slug, t.key as target_key, ss.string_key as string_key
+    `SELECT p.slug as project_slug, ss.string_key as string_key
      FROM source_strings ss
-     JOIN targets t ON t.id = ss.target_id
-     JOIN projects p ON p.id = t.project_id
+     JOIN projects p ON p.id = ss.project_id
      WHERE ss.id = ?`,
     [input.sourceStringId],
   );
@@ -57,7 +54,6 @@ async function sendSuggestionWebhook(input: {
         content: [
           "New translation suggestion",
           `project: ${ref.project_slug}`,
-          `target: ${ref.target_key}`,
           `key: ${ref.string_key}`,
           `locale: ${input.locale}`,
           `author: ${input.authorName}`,
@@ -166,25 +162,16 @@ type SuggestionRow = {
   context: string | null;
   placeholder_sig: string;
   project_slug: string;
-  target_key: string;
   decision_note: string | null;
   decided_at: string | null;
   decided_by_discord_id: string | null;
 };
 
 export async function GET(req: Request) {
-  let session;
-  try {
-    session = await requireSession(req);
-  } catch (res) {
-    return res as Response;
-  }
-
   const url = new URL(req.url);
   const status = url.searchParams.get("status") ?? "pending";
   const locale = url.searchParams.get("locale");
   const project = url.searchParams.get("project");
-  const target = url.searchParams.get("target");
   const mine = url.searchParams.get("mine") === "1";
   const page = Math.max(0, parseInt(url.searchParams.get("page") ?? "0", 10) || 0);
   const limit = Math.min(
@@ -192,6 +179,13 @@ export async function GET(req: Request) {
     Math.max(1, parseInt(url.searchParams.get("limit") ?? "20", 10) || 20),
   );
   const offset = page * limit;
+
+  let session;
+  try {
+    session = mine ? await requireSession(req) : await requireTrustedSession(req);
+  } catch (res) {
+    return res as Response;
+  }
 
   const conditions: string[] = [];
   const params: unknown[] = [];
@@ -209,10 +203,6 @@ export async function GET(req: Request) {
     conditions.push("p.slug = ?");
     params.push(project);
   }
-  if (target) {
-    conditions.push("t.key = ?");
-    params.push(target);
-  }
   if (mine) {
     conditions.push("sg.author_discord_id = ?");
     params.push(session.sub);
@@ -223,8 +213,7 @@ export async function GET(req: Request) {
   const baseQuery = `
     FROM suggestions sg
     JOIN source_strings ss ON ss.id = sg.source_string_id
-    JOIN targets t ON t.id = ss.target_id
-    JOIN projects p ON p.id = t.project_id
+    JOIN projects p ON p.id = ss.project_id
     ${where}
   `;
 
@@ -238,7 +227,7 @@ export async function GET(req: Request) {
       sg.id, sg.locale, sg.text, sg.author_discord_id, sg.author_name,
       sg.status, sg.created_at, sg.decision_note, sg.decided_at, sg.decided_by_discord_id,
       ss.id as source_string_id, ss.string_key, ss.source_text, ss.context, ss.placeholder_sig,
-      p.slug as project_slug, t.key as target_key
+      p.slug as project_slug
     ${baseQuery}
     ORDER BY sg.created_at DESC
     LIMIT ? OFFSET ?`,
@@ -254,7 +243,6 @@ export async function GET(req: Request) {
     status: r.status,
     created_at: r.created_at,
     project_slug: r.project_slug,
-    target_key: r.target_key,
     decision_note: r.decision_note,
     decided_at: r.decided_at,
     decided_by_discord_id: r.decided_by_discord_id,

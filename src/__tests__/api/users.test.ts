@@ -66,6 +66,8 @@ describe("GET /api/users", () => {
     const json = (await res.json()) as any;
     expect(json.users[0].discord_id).toBe("517599684961894400");
     expect(json.users[0].role).toBe("god");
+    expect(json.users[0].display_name).toBe("Kaf");
+    expect(json.users[0].added_by_discord_id).toBeNull();
     expect(json.users[1].discord_id).toBe("123456789012345678");
     expect(json.users[1].discord_handle).toBe("trusted-user");
   });

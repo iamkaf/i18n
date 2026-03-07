@@ -1,16 +1,24 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useState } from "react";
-import { useParams } from "next/navigation";
+import { sileo } from "sileo";
+import { useDeferredValue, useEffect, useState } from "react";
+import { useParams, useRouter, useSearchParams } from "next/navigation";
 import { AppShell } from "@/components/atelier/app-shell";
 import { EmptyStateCard } from "@/components/atelier/empty-state-card";
 import { ErrorStateCard } from "@/components/atelier/error-state-card";
-import { FeatureCard } from "@/components/atelier/feature-card";
+import { FilterToolbar } from "@/components/atelier/filter-toolbar";
+import { Input } from "@/components/ui/input";
+import { LocaleProgressStrip } from "@/components/atelier/locale-progress-strip";
 import { LockedStateCard } from "@/components/atelier/locked-state-card";
+import { PaginationControls } from "@/components/atelier/pagination-controls";
 import { SectionHeading } from "@/components/atelier/section-heading";
 import { StatusPill } from "@/components/atelier/status-pill";
-import { ApiError, apiJson } from "@/lib/api";
+import { StringRowCard, type StringRowCardItem } from "@/components/atelier/string-row-card";
+import { SuggestionDrawer } from "@/components/atelier/suggestion-drawer";
+import { Button } from "@/components/ui/button";
+import { ApiError, apiJson, getErrorMessage } from "@/lib/api";
+import { useSession } from "@/lib/use-session";
 
 type Project = {
   id: string;
@@ -19,92 +27,423 @@ type Project = {
   visibility: "public" | "private";
   default_locale: string;
   icon_url: string | null;
+  modrinth_project_id: string | null;
   modrinth_slug: string | null;
+  github_repo_url: string | null;
+  source_string_count: number;
+  has_source_catalog: number;
   updated_at: string;
 };
 
-type Target = {
-  id: string;
-  key: string;
-  label: string | null;
-  source_revision: string | null;
-  source_hash: string | null;
-  active_strings: number;
-  updated_at: string;
+type DiscoveryFile = {
+  locale: string;
+  path: string;
+  source: "github";
+  kind: "source" | "translation";
 };
 
-export default function ProjectDetailPage() {
+type ProgressItem = {
+  locale: string;
+  approved_count: number;
+  total_strings: number;
+  coverage: number;
+};
+
+type ImportResult = {
+  ok: true;
+  locale: string;
+  mode: "source" | "translation";
+  imported: number;
+  updated: number;
+  deactivated: number;
+  ignored_non_string: number;
+  skipped_unmatched: Array<{ key: string }>;
+  source_path?: string | null;
+};
+
+type StringsResponse = {
+  page: number;
+  limit: number;
+  total: number;
+  locale: string;
+  strings: StringRowCardItem[];
+};
+
+function inferLocaleFromFilename(fileName: string): string {
+  const match = fileName.trim().toLowerCase().match(/([a-z]{2}_[a-z]{2})\.json$/);
+  return match?.[1] ?? "";
+}
+
+function summarizeImport(result: ImportResult): string {
+  const bits = [`${result.imported} new`, `${result.updated} updated`];
+  if (result.deactivated > 0) bits.push(`${result.deactivated} deactivated`);
+  if (result.skipped_unmatched.length > 0) bits.push(`${result.skipped_unmatched.length} skipped`);
+  if (result.ignored_non_string > 0) bits.push(`${result.ignored_non_string} ignored`);
+  return bits.join(", ");
+}
+
+export default function ProjectPage() {
   const params = useParams<{ slug: string }>();
+  const router = useRouter();
+  const searchParams = useSearchParams();
   const slug = params.slug;
+  const { user, god } = useSession();
   const [project, setProject] = useState<Project | null>(null);
-  const [targets, setTargets] = useState<Target[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [loadingProject, setLoadingProject] = useState(true);
+  const [loadingStrings, setLoadingStrings] = useState(false);
   const [locked, setLocked] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [query, setQuery] = useState(searchParams.get("q") || "");
+  const deferredQuery = useDeferredValue(query);
+  const [locale, setLocale] = useState((searchParams.get("locale") || "en_us").toLowerCase());
+  const [page, setPage] = useState(Math.max(0, parseInt(searchParams.get("page") ?? "0", 10) || 0));
+  const [limit, setLimit] = useState(25);
+  const [total, setTotal] = useState(0);
+  const [strings, setStrings] = useState<StringRowCardItem[]>([]);
+  const [progress, setProgress] = useState<ProgressItem[]>([]);
+  const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [composerText, setComposerText] = useState("");
+  const [composerError, setComposerError] = useState<string | null>(null);
+  const [submitting, setSubmitting] = useState(false);
+  const [editing, setEditing] = useState<StringRowCardItem["my_suggestion"] | null>(null);
+  const [refreshKey, setRefreshKey] = useState(0);
+  const [discoveryBusy, setDiscoveryBusy] = useState(false);
+  const [discoveryFiles, setDiscoveryFiles] = useState<DiscoveryFile[]>([]);
+  const [discoveryRepo, setDiscoveryRepo] = useState<{ owner: string; name: string; html_url: string } | null>(null);
+  const [discoveryWarning, setDiscoveryWarning] = useState<string | null>(null);
+  const [importBusy, setImportBusy] = useState(false);
+  const [lastImport, setLastImport] = useState<ImportResult | null>(null);
+  const [uploadFile, setUploadFile] = useState<File | null>(null);
+  const [uploadLocale, setUploadLocale] = useState("");
+  const [editSlug, setEditSlug] = useState("");
+  const [editName, setEditName] = useState("");
+  const [editVisibility, setEditVisibility] = useState<"public" | "private">("private");
+  const [editGithubRepoUrl, setEditGithubRepoUrl] = useState("");
+  const [savingProject, setSavingProject] = useState(false);
+
+  const selectedString = strings.find((item) => item.id === selectedId) ?? strings[0] ?? null;
+  const sourceFiles = discoveryFiles.filter((file) => file.kind === "source");
+  const translationFiles = discoveryFiles.filter((file) => file.kind === "translation");
 
   useEffect(() => {
     let alive = true;
-    async function run() {
-      setLoading(true);
+
+    async function loadProject() {
+      setLoadingProject(true);
       setLocked(false);
       setError(null);
-
       try {
-        const projectData = await apiJson<{ project: Project }>(`/api/projects/${slug}`);
+        const data = await apiJson<{ project: Project }>(`/api/projects/${slug}`);
         if (!alive) return;
-        setProject(projectData.project);
-
-        const targetData = await apiJson<{ targets: Target[] }>(`/api/projects/${slug}/targets`);
-        if (alive) {
-          setTargets(targetData.targets ?? []);
-        }
+        setProject(data.project);
       } catch (loadError) {
         if (!alive) return;
         if (loadError instanceof ApiError && loadError.status === 401) {
           setLocked(true);
           setProject(null);
-          setTargets([]);
         } else if (loadError instanceof ApiError && loadError.status === 404) {
           setError("Project not found.");
           setProject(null);
-          setTargets([]);
         } else {
-          setError(loadError instanceof Error ? loadError.message : "Failed to load project.");
+          setError(getErrorMessage(loadError));
         }
       } finally {
-        if (alive) setLoading(false);
+        if (alive) setLoadingProject(false);
       }
     }
 
-    void run();
+    void loadProject();
     return () => {
       alive = false;
     };
-  }, [slug]);
+  }, [slug, refreshKey]);
+
+  useEffect(() => {
+    if (!project) return;
+    setEditSlug(project.slug);
+    setEditName(project.name);
+    setEditVisibility(project.visibility);
+    setEditGithubRepoUrl(project.github_repo_url || "");
+  }, [project]);
+
+  useEffect(() => {
+    if (!project || !god) {
+      setDiscoveryFiles([]);
+      setDiscoveryRepo(null);
+      setDiscoveryWarning(null);
+      return;
+    }
+
+    let alive = true;
+    async function loadDiscovery() {
+      setDiscoveryBusy(true);
+      try {
+        const data = await apiJson<{
+          github_repo: { owner: string; name: string; html_url: string } | null;
+          locale_files: DiscoveryFile[];
+          warnings: string[];
+        }>(`/api/projects/${slug}/imports/discovery`);
+        if (!alive) return;
+        setDiscoveryRepo(data.github_repo);
+        setDiscoveryFiles(data.locale_files ?? []);
+        setDiscoveryWarning(data.warnings?.[0] ?? null);
+      } catch (loadError) {
+        if (!alive) return;
+        if (loadError instanceof ApiError && (loadError.status === 401 || loadError.status === 403)) {
+          return;
+        }
+        setDiscoveryRepo(null);
+        setDiscoveryFiles([]);
+        setDiscoveryWarning(getErrorMessage(loadError));
+      } finally {
+        if (alive) setDiscoveryBusy(false);
+      }
+    }
+
+    void loadDiscovery();
+    return () => {
+      alive = false;
+    };
+  }, [god, project, slug, refreshKey]);
+
+  useEffect(() => {
+    if (!project?.has_source_catalog) {
+      setStrings([]);
+      setProgress([]);
+      setSelectedId(null);
+      return;
+    }
+
+    let alive = true;
+    async function loadWorkbench() {
+      setLoadingStrings(true);
+      setError(null);
+      const params = new URLSearchParams({
+        locale,
+        page: String(page),
+        limit: "25",
+        include_mine: "1",
+      });
+      if (deferredQuery.trim()) params.set("q", deferredQuery.trim());
+
+      try {
+        const [progressData, stringsData] = await Promise.all([
+          apiJson<{ progress: ProgressItem[]; total_strings: number }>(`/api/projects/${slug}/progress`),
+          apiJson<StringsResponse>(`/api/projects/${slug}/strings?${params.toString()}`),
+        ]);
+        if (!alive) return;
+        const totalStrings = progressData.total_strings ?? 0;
+        const nextProgress = progressData.progress ?? [];
+        const hasActiveLocale = nextProgress.some((item) => item.locale === stringsData.locale);
+        setProgress(
+          hasActiveLocale
+            ? nextProgress
+            : [
+                ...nextProgress,
+                {
+                  locale: stringsData.locale,
+                  approved_count: stringsData.locale === "en_us" ? totalStrings : 0,
+                  total_strings: totalStrings,
+                  coverage: stringsData.locale === "en_us" && totalStrings > 0 ? 1 : 0,
+                },
+              ],
+        );
+        setStrings(stringsData.strings ?? []);
+        setPage(stringsData.page);
+        setLimit(stringsData.limit);
+        setTotal(stringsData.total);
+        setSelectedId((current) => {
+          if (current && (stringsData.strings ?? []).some((item) => item.id === current)) return current;
+          return stringsData.strings?.[0]?.id ?? null;
+        });
+      } catch (loadError) {
+        if (!alive) return;
+        if (loadError instanceof ApiError && loadError.status === 401) {
+          setLocked(true);
+          setStrings([]);
+        } else if (loadError instanceof ApiError && loadError.status === 404) {
+          setError("Project not found.");
+          setStrings([]);
+        } else {
+          setError(getErrorMessage(loadError));
+        }
+      } finally {
+        if (alive) setLoadingStrings(false);
+      }
+    }
+
+    void loadWorkbench();
+    return () => {
+      alive = false;
+    };
+  }, [deferredQuery, locale, page, project?.has_source_catalog, refreshKey, slug]);
+
+  useEffect(() => {
+    if (selectedString) {
+      setComposerText(selectedString.my_suggestion?.text ?? "");
+      setComposerError(null);
+    }
+  }, [selectedString]);
+
+  async function refreshProjectState() {
+    setRefreshKey((value) => value + 1);
+  }
+
+  async function handleProjectSave() {
+    if (!project) return;
+    setSavingProject(true);
+    try {
+      const data = await apiJson<{ project: Project }>(`/api/projects/${project.slug}`, {
+        method: "PATCH",
+        body: JSON.stringify({
+          slug: editSlug,
+          name: editName,
+          visibility: editVisibility,
+          github_repo_url: editGithubRepoUrl,
+        }),
+      });
+      setProject(data.project);
+      if (data.project.slug !== project.slug) {
+        router.replace(`/projects/${data.project.slug}`);
+      }
+      sileo.success({ title: "Project updated", description: data.project.slug });
+      await refreshProjectState();
+    } catch (saveError) {
+      sileo.error({ title: "Project update failed", description: getErrorMessage(saveError) });
+    } finally {
+      setSavingProject(false);
+    }
+  }
+
+  async function runImport(payload: {
+    locale: string;
+    source:
+      | {
+          type: "github";
+          path: string;
+        }
+      | {
+          type: "upload";
+          file_name: string;
+          content: string;
+        };
+  }) {
+    if (!project) return;
+    setImportBusy(true);
+    try {
+      const result = await apiJson<ImportResult>(`/api/projects/${project.slug}/imports`, {
+        method: "POST",
+        body: JSON.stringify(payload),
+      });
+      setLastImport(result);
+      sileo.success({
+        title: result.locale === "en_us" ? "Source catalog imported" : `Imported ${result.locale}`,
+        description: summarizeImport(result),
+      });
+      if (payload.source.type === "upload") {
+        setUploadFile(null);
+        setUploadLocale("");
+      }
+      if (payload.locale !== locale && locale === "en_us" && payload.locale !== "en_us") {
+        setLocale(payload.locale);
+      }
+      await refreshProjectState();
+    } catch (importError) {
+      sileo.error({ title: "Import failed", description: getErrorMessage(importError) });
+    } finally {
+      setImportBusy(false);
+    }
+  }
+
+  async function handleManualUpload() {
+    if (!uploadFile) {
+      sileo.error({ title: "Choose a file", description: "Select a JSON file to import." });
+      return;
+    }
+    const inferredLocale = inferLocaleFromFilename(uploadFile.name);
+    const resolvedLocale = (uploadLocale || inferredLocale).trim().toLowerCase();
+    if (!/^[a-z]{2}_[a-z]{2}$/.test(resolvedLocale)) {
+      sileo.error({ title: "Locale required", description: "Use a filename like zh_cn.json or enter a locale manually." });
+      return;
+    }
+    if (!project?.has_source_catalog && resolvedLocale !== "en_us") {
+      sileo.error({ title: "Import en_us first", description: "Canonical source must exist before importing translations." });
+      return;
+    }
+
+    await runImport({
+      locale: resolvedLocale,
+      source: {
+        type: "upload",
+        file_name: uploadFile.name,
+        content: await uploadFile.text(),
+      },
+    });
+  }
+
+  async function handleSubmitSuggestion() {
+    if (!selectedString) return;
+    const nextLocale = locale.trim().toLowerCase();
+    const nextText = composerText.trim();
+
+    if (nextLocale === "en_us") {
+      setComposerError("Canonical English is imported directly. Pick a translation locale.");
+      return;
+    }
+    if (!/^[a-z]{2}_[a-z]{2}$/.test(nextLocale)) {
+      setComposerError("Locale must match xx_xx.");
+      return;
+    }
+    if (!nextText.length) {
+      setComposerError("Translation text is required.");
+      return;
+    }
+
+    setSubmitting(true);
+    setComposerError(null);
+    try {
+      await apiJson<{ ok: true; id: string }>("/api/suggestions", {
+        method: "POST",
+        body: JSON.stringify({
+          source_string_id: selectedString.id,
+          locale: nextLocale,
+          text: nextText,
+        }),
+      });
+      sileo.success({ title: "Suggestion submitted", description: selectedString.string_key });
+      await refreshProjectState();
+    } catch (submitError) {
+      const message = getErrorMessage(submitError);
+      setComposerError(message);
+      sileo.error({ title: "Could not submit suggestion", description: message });
+    } finally {
+      setSubmitting(false);
+    }
+  }
 
   return (
     <AppShell currentHref="/projects">
       <SectionHeading
-        eyebrow="Project"
+        eyebrow="Project workbench"
         title={project?.name || slug}
-        description="Targets represent import snapshots for releases or moving channels like latest."
+        description="Each project keeps one canonical en_us source catalog and approved locale translations layered on top."
       />
 
-      {loading ? (
+      {loadingProject ? (
         <section className="grid gap-4">
-          <div className="atelier-card h-32 animate-pulse" />
-          <div className="atelier-card h-48 animate-pulse" />
+          <div className="atelier-card h-24 animate-pulse" />
+          <div className="atelier-card h-80 animate-pulse" />
         </section>
       ) : locked ? (
-        <LockedStateCard description="This project is private. Sign in with Discord to inspect targets and browse source strings." />
+        <LockedStateCard description="This project is private. Sign in with Discord to browse strings and translation history." />
       ) : error ? (
         <ErrorStateCard
           title={error === "Project not found." ? "Not found" : "Unable to load project"}
           description={error}
         />
       ) : project ? (
-        <>
-          <section className="atelier-card mb-6 p-6">
+        <div className="grid gap-6">
+          <section className="atelier-card p-6">
             <div className="flex flex-wrap items-start justify-between gap-5">
               <div className="flex items-start gap-4">
                 {project.icon_url ? (
@@ -119,8 +458,11 @@ export default function ProjectDetailPage() {
                     <StatusPill variant={project.visibility === "public" ? "public" : "private"}>
                       {project.visibility}
                     </StatusPill>
+                    <StatusPill variant={project.has_source_catalog ? "approved" : "pending"}>
+                      {project.has_source_catalog ? "source ready" : "metadata only"}
+                    </StatusPill>
                     <span className="rounded-full bg-[#f3f4ff] px-2.5 py-1 text-xs text-[#4d4d6a] dark:bg-white/10 dark:text-white/70">
-                      default: {project.default_locale}
+                      canonical: en_us
                     </span>
                   </div>
                   <h1 className="text-3xl font-semibold">{project.name}</h1>
@@ -141,55 +483,432 @@ export default function ProjectDetailPage() {
                 </div>
               </div>
               <div className="text-sm text-[var(--atelier-muted)]">
-                updated: {new Date(project.updated_at).toLocaleString()}
+                <div>active strings: {project.source_string_count}</div>
+                <div className="mt-1">updated: {new Date(project.updated_at).toLocaleString()}</div>
               </div>
             </div>
           </section>
 
-          {targets.length === 0 ? (
-            <EmptyStateCard
-              title="No targets yet"
-              description="Push a source catalog to create the first translation target for this project."
-            />
-          ) : (
-            <section className="grid gap-4 md:grid-cols-2">
-              {targets.map((target) => (
-                <Link
-                  key={target.id}
-                  href={`/projects/${project.slug}/${target.key}`}
-                  className="block"
-                >
-                  <FeatureCard
-                    title={target.label || target.key}
-                    className="h-full transition-transform hover:-translate-y-0.5"
+          {god ? (
+            <section className="atelier-card p-5">
+              <div>
+                <div className="text-xs uppercase tracking-[0.15em] text-[var(--atelier-muted)]">
+                  Project settings
+                </div>
+                <h3 className="mt-2 text-lg font-semibold">Update local project metadata</h3>
+              </div>
+              <div className="mt-5 grid gap-4 md:grid-cols-2">
+                <label className="block">
+                  <span className="mb-1.5 block text-xs uppercase tracking-[0.15em] text-[var(--atelier-muted)]">
+                    Local slug
+                  </span>
+                  <Input value={editSlug} onChange={(event) => setEditSlug(event.target.value)} />
+                </label>
+                <label className="block">
+                  <span className="mb-1.5 block text-xs uppercase tracking-[0.15em] text-[var(--atelier-muted)]">
+                    Local name
+                  </span>
+                  <Input value={editName} onChange={(event) => setEditName(event.target.value)} />
+                </label>
+                <label className="block">
+                  <span className="mb-1.5 block text-xs uppercase tracking-[0.15em] text-[var(--atelier-muted)]">
+                    Visibility
+                  </span>
+                  <select
+                    value={editVisibility}
+                    onChange={(event) => setEditVisibility(event.target.value as "public" | "private")}
+                    className="atelier-ring h-9 w-full rounded-md border border-[var(--atelier-border)] bg-[var(--atelier-surface-soft)] px-3 text-sm"
                   >
-                    <div className="space-y-2 text-sm">
-                      <div>
-                        <span className="text-[var(--atelier-muted)]">key:</span> {target.key}
-                      </div>
-                      <div>
-                        <span className="text-[var(--atelier-muted)]">active strings:</span>{" "}
-                        {target.active_strings}
-                      </div>
-                      {target.source_revision ? (
-                        <div>
-                          <span className="text-[var(--atelier-muted)]">revision:</span>{" "}
-                          {target.source_revision}
-                        </div>
-                      ) : null}
-                      {target.source_hash ? (
-                        <div className="font-mono text-xs">
-                          <span className="text-[var(--atelier-muted)]">hash:</span>{" "}
-                          {target.source_hash}
-                        </div>
-                      ) : null}
-                    </div>
-                  </FeatureCard>
-                </Link>
-              ))}
+                    <option value="private">private</option>
+                    <option value="public">public</option>
+                  </select>
+                </label>
+                <label className="block">
+                  <span className="mb-1.5 block text-xs uppercase tracking-[0.15em] text-[var(--atelier-muted)]">
+                    GitHub repo URL
+                  </span>
+                  <Input
+                    value={editGithubRepoUrl}
+                    onChange={(event) => setEditGithubRepoUrl(event.target.value)}
+                    placeholder="https://github.com/iamkaf/amber"
+                  />
+                </label>
+              </div>
+              <div className="mt-4 flex justify-end">
+                <Button onClick={() => void handleProjectSave()} disabled={savingProject}>
+                  {savingProject ? "Saving..." : "Save project"}
+                </Button>
+              </div>
             </section>
+          ) : null}
+
+          {god ? (
+            <section className="atelier-card p-5">
+              <div className="flex flex-wrap items-start justify-between gap-4">
+                <div>
+                  <div className="text-xs uppercase tracking-[0.15em] text-[var(--atelier-muted)]">
+                    Imports
+                  </div>
+                  <h3 className="mt-2 text-lg font-semibold">
+                    {project.has_source_catalog ? "Sync source and translation files" : "Import canonical source first"}
+                  </h3>
+                  <p className="mt-2 text-sm text-[var(--atelier-muted)]">
+                    GitHub discovery looks for files named <code>xx_xx.json</code>. Importing <code>en_us</code> replaces the canonical source catalog immediately. Other locales land directly as approved translations.
+                  </p>
+                </div>
+                {discoveryRepo ? (
+                  <a
+                    href={discoveryRepo.html_url}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="text-sm text-[var(--atelier-highlight)]"
+                  >
+                    {discoveryRepo.owner}/{discoveryRepo.name}
+                  </a>
+                ) : null}
+              </div>
+
+              {discoveryWarning ? (
+                <p className="mt-3 text-sm text-[var(--atelier-muted)]">{discoveryWarning}</p>
+              ) : null}
+
+              {discoveryBusy ? (
+                <div className="mt-5 grid gap-4 md:grid-cols-2">
+                  <div className="h-36 rounded-3xl border border-[var(--atelier-border)] bg-[var(--atelier-surface-soft)] animate-pulse" />
+                  <div className="h-36 rounded-3xl border border-[var(--atelier-border)] bg-[var(--atelier-surface-soft)] animate-pulse" />
+                </div>
+              ) : (
+                <div className="mt-5 grid gap-4 md:grid-cols-2">
+                  <div className="rounded-3xl border border-[var(--atelier-border)] bg-[var(--atelier-surface-soft)] p-4">
+                    <div className="text-xs uppercase tracking-[0.15em] text-[var(--atelier-muted)]">
+                      Source
+                    </div>
+                    {sourceFiles.length === 0 ? (
+                      <p className="mt-3 text-sm text-[var(--atelier-muted)]">
+                        No <code>en_us.json</code> files detected in the linked repository.
+                      </p>
+                    ) : (
+                      <div className="mt-3 grid gap-3">
+                        {sourceFiles.map((file) => (
+                          <div
+                            key={file.path}
+                            className="rounded-2xl border border-[var(--atelier-border)] bg-[var(--atelier-surface)] p-3"
+                          >
+                            <div className="font-mono text-xs text-[var(--atelier-highlight)]">{file.path}</div>
+                            <Button
+                              className="mt-3"
+                              variant="outline"
+                              onClick={() =>
+                                void runImport({
+                                  locale: "en_us",
+                                  source: { type: "github", path: file.path },
+                                })
+                              }
+                              disabled={importBusy}
+                            >
+                              {project.has_source_catalog ? "Sync en_us from GitHub" : "Import en_us from GitHub"}
+                            </Button>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+
+                  <div className="rounded-3xl border border-[var(--atelier-border)] bg-[var(--atelier-surface-soft)] p-4">
+                    <div className="text-xs uppercase tracking-[0.15em] text-[var(--atelier-muted)]">
+                      Translations
+                    </div>
+                    {!project.has_source_catalog ? (
+                      <p className="mt-3 text-sm text-[var(--atelier-muted)]">
+                        Import <code>en_us</code> first, then project translations like <code>zh_cn</code> become available here.
+                      </p>
+                    ) : translationFiles.length === 0 ? (
+                      <p className="mt-3 text-sm text-[var(--atelier-muted)]">
+                        No translation locale files were detected in the linked repository.
+                      </p>
+                    ) : (
+                      <div className="mt-3 grid gap-3">
+                        {translationFiles.map((file) => (
+                          <div
+                            key={file.path}
+                            className="rounded-2xl border border-[var(--atelier-border)] bg-[var(--atelier-surface)] p-3"
+                          >
+                            <div className="font-mono text-xs text-[var(--atelier-highlight)]">{file.path}</div>
+                            <div className="mt-2 text-sm text-[var(--atelier-muted)]">locale: {file.locale}</div>
+                            <Button
+                              className="mt-3"
+                              variant="outline"
+                              onClick={() =>
+                                void runImport({
+                                  locale: file.locale,
+                                  source: { type: "github", path: file.path },
+                                })
+                              }
+                              disabled={importBusy}
+                            >
+                              Import {file.locale}
+                            </Button>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
+
+              <div className="mt-5 rounded-3xl border border-[var(--atelier-border)] bg-[var(--atelier-surface-soft)] p-4">
+                <div className="text-xs uppercase tracking-[0.15em] text-[var(--atelier-muted)]">
+                  Manual upload
+                </div>
+                <div className="mt-4 grid gap-4 md:grid-cols-[minmax(0,1.4fr)_160px_140px]">
+                  <label className="block">
+                    <span className="mb-1.5 block text-xs uppercase tracking-[0.15em] text-[var(--atelier-muted)]">
+                      JSON file
+                    </span>
+                    <input
+                      type="file"
+                      accept=".json,application/json"
+                      onChange={(event) => {
+                        const nextFile = event.target.files?.[0] ?? null;
+                        setUploadFile(nextFile);
+                        setUploadLocale(nextFile ? inferLocaleFromFilename(nextFile.name) : "");
+                      }}
+                      className="block w-full text-sm text-[var(--atelier-muted)] file:mr-4 file:rounded-xl file:border file:border-[var(--atelier-border)] file:bg-[var(--atelier-surface)] file:px-4 file:py-2 file:text-sm"
+                    />
+                  </label>
+                  <label className="block">
+                    <span className="mb-1.5 block text-xs uppercase tracking-[0.15em] text-[var(--atelier-muted)]">
+                      Locale
+                    </span>
+                    <Input
+                      value={uploadLocale}
+                      onChange={(event) => setUploadLocale(event.target.value.toLowerCase())}
+                      placeholder="zh_cn"
+                    />
+                  </label>
+                  <div className="flex items-end">
+                    <Button className="w-full" onClick={() => void handleManualUpload()} disabled={importBusy}>
+                      {importBusy ? "Importing..." : "Import file"}
+                    </Button>
+                  </div>
+                </div>
+                {!project.has_source_catalog ? (
+                  <p className="mt-3 text-sm text-[var(--atelier-muted)]">
+                    Translation uploads stay disabled in practice until the canonical <code>en_us</code> catalog exists.
+                  </p>
+                ) : null}
+              </div>
+
+              {lastImport ? (
+                <div className="mt-5 rounded-3xl border border-[var(--atelier-border)] bg-[var(--atelier-surface-soft)] p-4 text-sm">
+                  <div className="font-semibold">
+                    Last import: {lastImport.locale} ({lastImport.mode})
+                  </div>
+                  <div className="mt-2 text-[var(--atelier-muted)]">{summarizeImport(lastImport)}</div>
+                  {lastImport.skipped_unmatched.length > 0 ? (
+                    <div className="mt-2 text-[var(--atelier-muted)]">
+                      Skipped unmatched keys: {lastImport.skipped_unmatched.map((item) => item.key).join(", ")}
+                    </div>
+                  ) : null}
+                </div>
+              ) : null}
+            </section>
+          ) : null}
+
+          {!project.has_source_catalog ? (
+            god ? null : (
+              <EmptyStateCard
+                title="No source catalog yet"
+                description="A god user needs to import en_us before contributors can browse and translate this project."
+              />
+            )
+          ) : (
+            <>
+              <FilterToolbar sticky>
+                <label className="block min-w-[180px] flex-1">
+                  <span className="mb-1.5 block text-xs uppercase tracking-[0.15em] text-[var(--atelier-muted)]">
+                    Locale
+                  </span>
+                  <Input
+                    value={locale}
+                    onChange={(event) => {
+                      setLocale(event.target.value.toLowerCase());
+                      setPage(0);
+                    }}
+                    placeholder="zh_cn"
+                  />
+                </label>
+                <label className="block min-w-[260px] flex-[2]">
+                  <span className="mb-1.5 block text-xs uppercase tracking-[0.15em] text-[var(--atelier-muted)]">
+                    Search strings
+                  </span>
+                  <Input
+                    value={query}
+                    onChange={(event) => {
+                      setQuery(event.target.value);
+                      setPage(0);
+                    }}
+                    placeholder="Search by key or source text"
+                  />
+                </label>
+              </FilterToolbar>
+
+              <section>
+                <LocaleProgressStrip
+                  items={progress}
+                  activeLocale={locale}
+                  onSelect={(nextLocale) => {
+                    setLocale(nextLocale);
+                    setPage(0);
+                  }}
+                />
+              </section>
+
+              <section className="grid gap-6 xl:grid-cols-[minmax(0,1.8fr)_minmax(22rem,0.9fr)]">
+                <div>
+                  {loadingStrings ? (
+                    <div className="grid gap-4">
+                      <div className="atelier-card h-44 animate-pulse" />
+                      <div className="atelier-card h-44 animate-pulse" />
+                    </div>
+                  ) : strings.length === 0 ? (
+                    <EmptyStateCard
+                      title="No strings matched this view"
+                      description="Try another locale or clear the search term."
+                    />
+                  ) : (
+                    <div className="grid gap-4">
+                      {strings.map((item) => (
+                        <StringRowCard
+                          key={item.id}
+                          item={item}
+                          active={selectedString?.id === item.id}
+                          onSelect={() => setSelectedId(item.id)}
+                          onEditSuggestion={(suggestion) => {
+                            setSelectedId(item.id);
+                            setEditing(suggestion);
+                          }}
+                        />
+                      ))}
+                      <PaginationControls page={page} limit={limit} total={total} onPageChange={setPage} />
+                    </div>
+                  )}
+                </div>
+
+                <aside className="atelier-card h-fit p-5 xl:sticky xl:top-32">
+                  {!user ? (
+                    <LockedStateCard
+                      title="Contributor tools are sign-in only"
+                      description="Browse the source freely here, then sign in with Discord before drafting or revising a suggestion."
+                    />
+                  ) : !selectedString ? (
+                    <EmptyStateCard
+                      title="Choose a string"
+                      description="Select a row from the left column to draft or revise a suggestion."
+                    />
+                  ) : locale === "en_us" ? (
+                    <EmptyStateCard
+                      title="Canonical source is read-only here"
+                      description="Import en_us directly from GitHub or upload it manually. Pick a translation locale to suggest translated text."
+                    />
+                  ) : selectedString.my_suggestion?.status === "pending" ? (
+                    <div>
+                      <h3 className="text-lg font-semibold">Pending suggestion</h3>
+                      <p className="mt-2 text-sm text-[var(--atelier-muted)]">
+                        You already have a pending suggestion for{" "}
+                        <span className="font-mono">{selectedString.string_key}</span>.
+                      </p>
+                      <div className="mt-4 rounded-2xl border border-[var(--atelier-border)] bg-[var(--atelier-surface-soft)] p-4 text-sm">
+                        {selectedString.my_suggestion.text}
+                      </div>
+                      <div className="mt-4 flex items-center gap-2">
+                        <Button variant="outline" onClick={() => setEditing(selectedString.my_suggestion)}>
+                          Edit draft
+                        </Button>
+                      </div>
+                    </div>
+                  ) : (
+                    <div>
+                      <div className="mb-4">
+                        <div className="text-sm text-[var(--atelier-muted)]">
+                          <Link href="/projects" className="text-[var(--atelier-highlight)]">
+                            Projects
+                          </Link>{" "}
+                          / {project.slug}
+                        </div>
+                        <div className="mt-3 font-mono text-sm text-[var(--atelier-highlight)]">
+                          {selectedString.string_key}
+                        </div>
+                        <h3 className="mt-2 text-lg font-semibold">{selectedString.source_text}</h3>
+                        {selectedString.context ? (
+                          <p className="mt-2 text-sm text-[var(--atelier-muted)]">
+                            context: {selectedString.context}
+                          </p>
+                        ) : null}
+                      </div>
+                      <div className="space-y-4">
+                        <div>
+                          <label className="mb-1.5 block text-xs uppercase tracking-[0.15em] text-[var(--atelier-muted)]">
+                            Locale
+                          </label>
+                          <Input
+                            value={locale}
+                            onChange={(event) => setLocale(event.target.value.toLowerCase())}
+                            placeholder="zh_cn"
+                          />
+                        </div>
+                        <div>
+                          <label className="mb-1.5 block text-xs uppercase tracking-[0.15em] text-[var(--atelier-muted)]">
+                            Suggestion
+                          </label>
+                          <textarea
+                            value={composerText}
+                            onChange={(event) => setComposerText(event.target.value)}
+                            rows={10}
+                            className="atelier-ring min-h-48 w-full rounded-2xl border border-[var(--atelier-border)] bg-[var(--atelier-surface-soft)] px-4 py-3 text-sm outline-none"
+                            placeholder="Write the translation for the active locale"
+                          />
+                        </div>
+                        {composerError ? <p className="text-sm text-rose-600 dark:text-rose-300">{composerError}</p> : null}
+                        <Button onClick={() => void handleSubmitSuggestion()} disabled={submitting}>
+                          {submitting ? "Submitting..." : "Submit suggestion"}
+                        </Button>
+                      </div>
+                    </div>
+                  )}
+                </aside>
+              </section>
+            </>
           )}
-        </>
+
+          <SuggestionDrawer
+            open={Boolean(editing)}
+            title="Edit pending suggestion"
+            description={selectedString ? `Revise ${selectedString.string_key}` : undefined}
+            initialLocale={editing?.locale ?? locale}
+            initialText={editing?.text ?? ""}
+            submitLabel="Save changes"
+            onClose={() => setEditing(null)}
+            onSubmit={async ({ locale: nextLocale, text }) => {
+              if (!editing) return;
+              await apiJson(`/api/suggestions/${editing.id}`, {
+                method: "PATCH",
+                body: JSON.stringify({ locale: nextLocale, text }),
+              });
+              sileo.success({ title: "Suggestion updated", description: selectedString?.string_key });
+              await refreshProjectState();
+            }}
+            onWithdraw={
+              editing
+                ? async () => {
+                    await apiJson(`/api/suggestions/${editing.id}`, { method: "DELETE" });
+                    sileo.success({ title: "Suggestion withdrawn", description: selectedString?.string_key });
+                    await refreshProjectState();
+                  }
+                : undefined
+            }
+          />
+        </div>
       ) : null}
     </AppShell>
   );

@@ -1,5 +1,5 @@
+import { GOD_DISCORD_ID } from "@/lib/auth-constants";
 import {
-  GOD_DISCORD_ID,
   getUserRole,
   listManagedUsers,
   requireGodSession,
@@ -24,8 +24,9 @@ function parseMutableRole(value: unknown): MutableRole | null {
 }
 
 export async function GET(req: Request) {
+  let session;
   try {
-    await requireGodSession(req);
+    session = await requireGodSession(req);
   } catch (error) {
     if (error instanceof Response) return error;
     throw error;
@@ -36,7 +37,7 @@ export async function GET(req: Request) {
     parseMutableRole(url.searchParams.get("role")) ??
     (url.searchParams.get("role") === "all" ? "all" : "all");
   const search = (url.searchParams.get("search") || "").trim();
-  const users = await listManagedUsers({ role, search });
+  const users = await listManagedUsers({ role, search, godDisplayName: session.name });
   return Response.json({ users, god_discord_id: GOD_DISCORD_ID });
 }
 

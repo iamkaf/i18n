@@ -1,16 +1,16 @@
 import { dbAll, dbFirst } from "@/lib/db";
 import { getSession, requireSession } from "@/lib/session";
 
-type ProjectTargetRow = {
-  project_id: string;
-  project_slug: string;
+type ProjectRow = {
+  id: string;
+  slug: string;
   visibility: "public" | "private";
   default_locale: string;
-  target_id: string;
-  target_key: string;
 };
 
-type CountRow = { total: number };
+type CountRow = {
+  total: number;
+};
 
 type StringRow = {
   id: string;
@@ -26,44 +26,35 @@ type StringRow = {
   my_suggestion_created_at: string | null;
 };
 
-async function requireTargetAccess(
-  req: Request,
-  slug: string,
-  target: string,
-): Promise<ProjectTargetRow | Response> {
-  const row = await dbFirst<ProjectTargetRow>(
-    `SELECT
-       p.id as project_id,
-       p.slug as project_slug,
-       p.visibility as visibility,
-       p.default_locale as default_locale,
-       t.id as target_id,
-       t.key as target_key
-     FROM projects p
-     JOIN targets t ON t.project_id = p.id
-     WHERE p.slug = ? AND t.key = ?`,
-    [slug, target],
+async function requireProjectAccess(req: Request, slug: string): Promise<ProjectRow | Response> {
+  const project = await dbFirst<ProjectRow>(
+    `SELECT id, slug, visibility, default_locale
+     FROM projects
+     WHERE slug = ?`,
+    [slug],
   );
 
-  if (!row) return Response.json({ error: "Project or target not found" }, { status: 404 });
-  if (row.visibility === "private") {
+  if (!project) {
+    return Response.json({ error: "Project not found" }, { status: 404 });
+  }
+
+  if (project.visibility === "private") {
     try {
       await requireSession(req);
-    } catch (res) {
-      return res as Response;
+    } catch (error) {
+      return error as Response;
     }
   }
 
-  return row;
+  return project;
 }
 
-export async function GET(
-  req: Request,
-  { params }: { params: Promise<{ slug: string; target: string }> },
-) {
-  const { slug, target } = await params;
-  const access = await requireTargetAccess(req, slug, target);
-  if (access instanceof Response) return access;
+export async function GET(req: Request, { params }: { params: Promise<{ slug: string }> }) {
+  const { slug } = await params;
+  const access = await requireProjectAccess(req, slug);
+  if (access instanceof Response) {
+    return access;
+  }
 
   const url = new URL(req.url);
   const page = Math.max(0, parseInt(url.searchParams.get("page") ?? "0", 10) || 0);
@@ -73,12 +64,16 @@ export async function GET(
   );
   const offset = page * limit;
   const q = (url.searchParams.get("q") || "").trim();
-  const locale = (url.searchParams.get("locale") || access.default_locale).toLowerCase();
+  const locale = (url.searchParams.get("locale") || access.default_locale).trim().toLowerCase();
   const includeMine = url.searchParams.get("include_mine") === "1";
   const session = includeMine ? await getSession(req) : null;
 
-  const filters: string[] = ["ss.target_id = ?", "ss.is_active = 1"];
-  const args: unknown[] = [access.target_id];
+  if (!/^[a-z]{2}_[a-z]{2}$/.test(locale)) {
+    return Response.json({ error: "locale must match xx_xx" }, { status: 400 });
+  }
+
+  const filters: string[] = ["ss.project_id = ?", "ss.is_active = 1"];
+  const args: unknown[] = [access.id];
   if (q) {
     filters.push("(ss.string_key LIKE ? OR ss.source_text LIKE ?)");
     const like = `%${q}%`;
@@ -86,7 +81,6 @@ export async function GET(
   }
 
   const whereSql = filters.join(" AND ");
-
   const count = await dbFirst<CountRow>(
     `SELECT COUNT(*) as total
      FROM source_strings ss
@@ -162,7 +156,7 @@ export async function GET(
        ss.source_text,
        ss.context,
        ss.placeholder_sig,
-       tr.text as approved_translation
+       ${locale === "en_us" ? "ss.source_text" : "tr.text"} as approved_translation
        ${mineSql}
      FROM source_strings ss
      LEFT JOIN translations tr
@@ -177,12 +171,11 @@ export async function GET(
 
   return Response.json({
     ok: true,
+    project: access.slug,
     page,
     limit,
     total: count?.total ?? 0,
     locale,
-    project: access.project_slug,
-    target: access.target_key,
     strings: rows.map((row) => ({
       id: row.id,
       string_key: row.string_key,

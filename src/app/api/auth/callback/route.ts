@@ -1,5 +1,5 @@
 import { getEnv } from "@/lib/cf";
-import { signSession, sessionCookie } from "@/lib/session";
+import { sessionCookie, signSession, syncElevatedUserProfile } from "@/lib/session";
 
 const REDIRECT_URI =
   process.env.NODE_ENV === "development"
@@ -72,12 +72,20 @@ export async function GET(req: Request) {
 
   const user = (await userRes.json()) as DiscordUser;
   const displayName = user.global_name ?? user.username;
+  const handle = user.username;
   const avatarUrl = user.avatar
     ? `https://cdn.discordapp.com/avatars/${user.id}/${user.avatar}.png`
     : null;
 
+  await syncElevatedUserProfile({
+    discordId: user.id,
+    displayName,
+    discordHandle: handle,
+    avatarUrl,
+  });
+
   const token = await signSession(
-    { sub: user.id, name: displayName, avatar: avatarUrl },
+    { sub: user.id, name: displayName, handle, avatar: avatarUrl },
     sessionSecret,
   );
 

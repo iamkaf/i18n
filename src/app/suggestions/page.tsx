@@ -24,7 +24,6 @@ type Suggestion = {
   status: "pending" | "accepted" | "rejected";
   created_at: string;
   project_slug: string;
-  target_key: string;
   decision_note: string | null;
   decided_at: string | null;
   decided_by_discord_id: string | null;
@@ -46,7 +45,6 @@ export default function SuggestionsPage() {
   const [status, setStatus] = useState("pending");
   const [locale, setLocale] = useState("");
   const [project, setProject] = useState("");
-  const [target, setTarget] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [editing, setEditing] = useState<Suggestion | null>(null);
@@ -66,7 +64,6 @@ export default function SuggestionsPage() {
       });
       if (locale.trim()) params.set("locale", locale.trim().toLowerCase());
       if (project.trim()) params.set("project", project.trim());
-      if (target.trim()) params.set("target", target.trim());
 
       try {
         const data = await apiJson<{ suggestions: Suggestion[]; total: number; page: number }>(
@@ -93,7 +90,7 @@ export default function SuggestionsPage() {
     return () => {
       alive = false;
     };
-  }, [limit, locale, page, project, status, target, user]);
+  }, [limit, locale, page, project, status, user]);
 
   return (
     <AppShell currentHref="/suggestions">
@@ -152,19 +149,6 @@ export default function SuggestionsPage() {
                   setPage(0);
                 }}
                 placeholder="demo-mod"
-              />
-            </label>
-            <label className="block min-w-[180px] flex-1">
-              <span className="mb-1.5 block text-xs uppercase tracking-[0.15em] text-[var(--atelier-muted)]">
-                Target
-              </span>
-              <Input
-                value={target}
-                onChange={(event) => {
-                  setTarget(event.target.value);
-                  setPage(0);
-                }}
-                placeholder="latest"
               />
             </label>
           </FilterToolbar>
@@ -229,7 +213,6 @@ export default function SuggestionsPage() {
                     <div className="rounded-2xl border border-[var(--atelier-border)] bg-[var(--atelier-surface-soft)] p-4 text-sm text-[var(--atelier-muted)]">
                       <div>locale: {suggestion.locale}</div>
                       <div className="mt-1">project: {suggestion.project_slug}</div>
-                      <div className="mt-1">target: {suggestion.target_key}</div>
                       <div className="mt-1">
                         submitted: {new Date(suggestion.created_at).toLocaleString()}
                       </div>
@@ -251,7 +234,7 @@ export default function SuggestionsPage() {
             title="Edit pending suggestion"
             description={
               editing
-                ? `${editing.project_slug} / ${editing.target_key} / ${editing.source_string.key}`
+                ? `${editing.project_slug} / ${editing.source_string.key}`
                 : undefined
             }
             initialLocale={editing?.locale ?? ""}
