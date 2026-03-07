@@ -1,6 +1,7 @@
 "use client";
 
 import * as React from "react";
+import Image from "next/image";
 import Link from "next/link";
 import { useSession } from "@/lib/use-session";
 import { useSessionStore } from "@/lib/store";
@@ -66,9 +67,11 @@ export function AuthControls() {
       )}
     >
       {user.avatar ? (
-        <img
+        <Image
           src={user.avatar}
-          alt={user.name}
+          alt={`${user.name} avatar`}
+          width={32}
+          height={32}
           className="h-8 w-8 rounded-full object-cover transition-opacity group-hover:opacity-30"
         />
       ) : (

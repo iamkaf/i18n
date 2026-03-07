@@ -22,8 +22,8 @@ vi.mock("next/navigation", () => ({
   useRouter: () => ({ replace: mockReplace }),
 }));
 
-vi.mock("sileo", () => ({
-  sileo: {
+vi.mock("sonner", () => ({
+  toast: {
     success: vi.fn(),
     error: vi.fn(),
   },

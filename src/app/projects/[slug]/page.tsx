@@ -1,9 +1,10 @@
 "use client";
 
+import Image from "next/image";
 import Link from "next/link";
-import { sileo } from "sileo";
-import { useEffect, useMemo, useRef, useState } from "react";
-import { useParams, useSearchParams } from "next/navigation";
+import { toast } from "sonner";
+import { Suspense, useEffect, useMemo, useRef, useState } from "react";
+import { useParams } from "next/navigation";
 import { PublicShell } from "@/components/atelier/public-shell";
 import { EmptyStateCard } from "@/components/atelier/empty-state-card";
 import { ErrorStateCard } from "@/components/atelier/error-state-card";
@@ -101,6 +102,11 @@ function writeProjectPageNavigationState(slug: string, state: ProjectPageNavigat
   window.sessionStorage.setItem(getProjectPageNavigationKey(slug), JSON.stringify(state));
 }
 
+function getCurrentSearchParam(name: string): string | null {
+  if (typeof window === "undefined") return null;
+  return new URLSearchParams(window.location.search).get(name);
+}
+
 /* ------------------------------------------------------------------ */
 /*  Status dot helper                                                  */
 /* ------------------------------------------------------------------ */
@@ -133,8 +139,25 @@ function StatusDot({ item }: { item: StringItem }) {
 
 export default function ProjectPage() {
   const params = useParams<{ slug: string }>();
-  const searchParams = useSearchParams();
-  const slug = params.slug;
+
+  return (
+    <Suspense
+      fallback={
+        <PublicShell>
+          <div className="max-w-6xl mx-auto w-full px-6 md:px-10 py-8">
+            <Spinner />
+          </div>
+        </PublicShell>
+      }
+    >
+      <ProjectPageContent key={params.slug} slug={params.slug} />
+    </Suspense>
+  );
+}
+
+function ProjectPageContent({ slug }: { slug: string }) {
+  const searchLocaleParam = getCurrentSearchParam("locale");
+  const searchQueryParam = getCurrentSearchParam("q");
   const { user, god } = useSession();
 
   /* Project state */
@@ -144,12 +167,12 @@ export default function ProjectPage() {
   const [error, setError] = useState<string | null>(null);
 
   /* Filters */
-  const [query, setQuery] = useState(searchParams.get("q") ?? "");
+  const [query, setQuery] = useState(() => searchQueryParam ?? "");
   const [locale, setLocale] = useState(() => {
-    const initial = normalizeLocaleCode(searchParams.get("locale") ?? "en_us");
+    const initial = normalizeLocaleCode(searchLocaleParam ?? "en_us");
     return isSupportedLocaleCode(initial) ? initial : "en_us";
   });
-  const [debouncedQuery, setDebouncedQuery] = useState(searchParams.get("q") ?? "");
+  const [debouncedQuery, setDebouncedQuery] = useState(() => searchQueryParam ?? "");
 
   /* Strings */
   const [strings, setStrings] = useState<StringItem[]>([]);
@@ -192,13 +215,6 @@ export default function ProjectPage() {
   const coveragePct = activeProgress ? Math.round(activeProgress.coverage * 100) : 0;
 
   useEffect(() => {
-    setStrings([]);
-    setProgress([]);
-    setSelectedId(null);
-    setHasLoadedStrings(false);
-  }, [slug]);
-
-  useEffect(() => {
     const timeoutId = window.setTimeout(() => {
       setDebouncedQuery(query);
     }, 250);
@@ -208,11 +224,11 @@ export default function ProjectPage() {
   useEffect(() => {
     const savedNavigation = readProjectPageNavigationState(slug);
     if (savedNavigation) {
-      if (!searchParams.get("locale")) {
+      if (!searchLocaleParam) {
         const savedLocale = normalizeLocaleCode(savedNavigation.locale ?? "");
         if (isSupportedLocaleCode(savedLocale)) setLocale(savedLocale);
       }
-      if (!searchParams.get("q") && typeof savedNavigation.query === "string") {
+      if (!searchQueryParam && typeof savedNavigation.query === "string") {
         setQuery(savedNavigation.query);
         setDebouncedQuery(savedNavigation.query);
       }
@@ -221,7 +237,7 @@ export default function ProjectPage() {
       }
     }
     setHasRestoredNavigation(true);
-  }, [searchParams, slug]);
+  }, [searchLocaleParam, searchQueryParam, slug]);
 
   useEffect(() => {
     if (!hasRestoredNavigation) return;
@@ -307,16 +323,19 @@ export default function ProjectPage() {
 
   useEffect(() => {
     if (!selectedId) return;
+    if (!hasLoadedStrings) return;
     if (loadingStrings) return;
     if (filteredStrings.some((item) => item.id === selectedId)) return;
     setSelectedId(null);
-  }, [filteredStrings, loadingStrings, selectedId]);
+  }, [filteredStrings, hasLoadedStrings, loadingStrings, selectedId]);
 
   useEffect(() => {
     if (!selectedId) return;
     if (loadingStrings) return;
     const selectedListItem = listItemRefs.current.get(selectedId);
-    selectedListItem?.scrollIntoView({ block: "nearest" });
+    if (selectedListItem && typeof selectedListItem.scrollIntoView === "function") {
+      selectedListItem.scrollIntoView({ block: "nearest" });
+    }
   }, [filteredStrings, loadingStrings, selectedId]);
 
   /* ---- Sync composer text when selection changes ---- */
@@ -333,8 +352,10 @@ export default function ProjectPage() {
     nextLocale: string,
     options?: { preserveSelection?: boolean },
   ) {
-    setLocale(normalizeLocaleCode(nextLocale));
-    if (!options?.preserveSelection) {
+    const normalizedLocale = normalizeLocaleCode(nextLocale);
+    if (normalizedLocale === locale) return;
+    setLocale(normalizedLocale);
+    if (options?.preserveSelection === false) {
       setSelectedId(null);
     }
   }
@@ -351,7 +372,7 @@ export default function ProjectPage() {
     setComposerError(null);
     try {
       await apiJson<{ ok: true; id: string }>("/api/suggestions", { method: "POST", body: JSON.stringify({ source_string_id: selectedString.id, locale: nextLocale, text }) });
-      sileo.success({ title: "Submitted", description: selectedString.string_key });
+      toast.success("Submitted", { description: selectedString.string_key });
       // Optimistic update — patch the local string to show the pending draft
       setStrings((prev) =>
         prev.map((s) =>
@@ -364,7 +385,7 @@ export default function ProjectPage() {
     } catch (e) {
       const msg = getErrorMessage(e);
       setComposerError(msg);
-      sileo.error({ title: "Failed", description: msg });
+      toast.error("Failed", { description: msg });
     } finally {
       setSubmitting(false);
     }
@@ -391,7 +412,13 @@ export default function ProjectPage() {
             <header className="flex items-center gap-3 mb-6">
               <div className="w-10 h-10 shrink-0 rounded-lg overflow-hidden border border-[var(--atelier-border)]">
                 {project.icon_url ? (
-                  <img src={project.icon_url} alt={`${project.name} icon`} className="w-full h-full object-cover" />
+                  <Image
+                    src={project.icon_url}
+                    alt={`${project.name} icon`}
+                    width={40}
+                    height={40}
+                    className="w-full h-full object-cover"
+                  />
                 ) : (
                   <div className="w-full h-full bg-gradient-to-tr from-[var(--atelier-highlight)] to-indigo-500 flex items-center justify-center text-white font-bold text-sm">
                     {project.name.charAt(0)}
@@ -440,14 +467,22 @@ export default function ProjectPage() {
                     placeholder="Search strings…"
                     className="flex-1 max-w-xs"
                   />
-                  {activeProgress && (
-                    <div className="flex items-center gap-2 ml-auto text-xs text-[var(--atelier-muted)]">
-                      <div className="w-20 h-1.5 rounded-full bg-black/8 dark:bg-white/10 overflow-hidden">
-                        <div className="h-full rounded-full bg-[var(--atelier-highlight)] transition-all" style={{ width: `${coveragePct}%` }} />
+                  <div className="ml-auto flex items-center gap-3">
+                    {loadingStrings && hasLoadedStrings && (
+                      <div className="inline-flex items-center gap-1.5 text-xs text-[var(--atelier-muted)]" aria-live="polite" aria-busy="true">
+                        <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                        <span>Updating locale…</span>
                       </div>
-                      <span>{coveragePct}%</span>
-                    </div>
-                  )}
+                    )}
+                    {activeProgress && (
+                      <div className="flex items-center gap-2 text-xs text-[var(--atelier-muted)]">
+                        <div className="w-20 h-1.5 rounded-full bg-black/8 dark:bg-white/10 overflow-hidden">
+                          <div className="h-full rounded-full bg-[var(--atelier-highlight)] transition-all" style={{ width: `${coveragePct}%` }} />
+                        </div>
+                        <span>{coveragePct}%</span>
+                      </div>
+                    )}
+                  </div>
                 </div>
 
                 {/* ─── Locale progress ─── */}
@@ -455,7 +490,7 @@ export default function ProjectPage() {
                   <div className="mb-4 flex flex-wrap gap-1.5">
                     {progress.map((p) => (
                       <button key={p.locale} type="button"
-                        onClick={() => { setLocale(normalizeLocaleCode(p.locale)); setSelectedId(null); }}
+                        onClick={() => handleLocaleChange(p.locale)}
                         className={cn(
                           "flex items-center gap-2 px-2.5 py-1.5 rounded-md border text-xs transition-colors",
                           p.locale === locale
@@ -475,8 +510,14 @@ export default function ProjectPage() {
                 {/* ═══════════════════════════════════════════════ */}
                 {/*  TWO-COLUMN LAYOUT                              */}
                 {/* ═══════════════════════════════════════════════ */}
-                {loadingStrings ? <Spinner /> : (
-                  <div className="grid grid-cols-1 lg:grid-cols-[minmax(0,1fr)_minmax(22rem,1.1fr)] gap-4 items-start">
+                {!hasLoadedStrings && loadingStrings ? <Spinner /> : (
+                  <div className="relative" aria-busy={loadingStrings}>
+                    <div
+                      className={cn(
+                        "grid grid-cols-1 lg:grid-cols-[minmax(0,1fr)_minmax(22rem,1.1fr)] gap-4 items-start transition-opacity",
+                        loadingStrings ? "opacity-75" : "opacity-100",
+                      )}
+                    >
                     {/* ──────── LEFT: String list ──────── */}
                     <div className="bg-[var(--atelier-surface)] rounded-lg border border-[var(--atelier-border)] overflow-hidden max-h-[calc(100vh-14rem)] overflow-y-auto">
                       {filteredStrings.length === 0 ? (
@@ -609,7 +650,10 @@ export default function ProjectPage() {
                           {/* Composer / auth states */}
                           {!user ? (
                             <p className="text-sm text-[var(--atelier-muted)]">
-                              <a href="/api/auth/discord" className="text-[var(--atelier-highlight)] hover:underline font-medium">Sign in with Discord</a> to contribute translations.
+                              <Link href="/api/auth/discord" className="text-[var(--atelier-highlight)] hover:underline font-medium">
+                                Sign in with Discord
+                              </Link>{" "}
+                              to contribute translations.
                             </p>
                           ) : isSourceLocale ? null : (
                             selectedString.my_suggestion?.status === "pending" ? (
@@ -642,6 +686,10 @@ export default function ProjectPage() {
                         </div>
                       )}
                     </div>
+                    </div>
+                    {loadingStrings && hasLoadedStrings && (
+                      <div className="absolute inset-0 z-10 rounded-lg bg-[var(--atelier-bg)]/45 backdrop-blur-[1px] cursor-wait" />
+                    )}
                   </div>
                 )}
 
@@ -657,12 +705,12 @@ export default function ProjectPage() {
                   onSubmit={async ({ locale: nextLocale, text }) => {
                     if (!editing) return;
                     await apiJson(`/api/suggestions/${editing.id}`, { method: "PATCH", body: JSON.stringify({ locale: nextLocale, text }) });
-                    sileo.success({ title: "Updated", description: selectedString?.string_key });
+                    toast.success("Updated", { description: selectedString?.string_key });
                     refresh();
                   }}
                   onWithdraw={editing ? async () => {
                     await apiJson(`/api/suggestions/${editing.id}`, { method: "DELETE" });
-                    sileo.success({ title: "Withdrawn", description: selectedString?.string_key });
+                    toast.success("Withdrawn", { description: selectedString?.string_key });
                     refresh();
                   } : undefined}
                 />

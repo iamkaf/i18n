@@ -48,7 +48,7 @@ describe("AppShell navigation", () => {
 
     expect(screen.getByText("Home")).toBeTruthy();
     expect(screen.getByText("Projects")).toBeTruthy();
-    expect(screen.queryByText("My Suggestions")).toBeNull();
+    expect(screen.queryByText("Suggestions")).toBeNull();
     expect(screen.queryByText("Moderation")).toBeNull();
   });
 
@@ -66,7 +66,7 @@ describe("AppShell navigation", () => {
       </AppShell>,
     );
 
-    expect(screen.getByText("My Suggestions")).toBeTruthy();
+    expect(screen.getByText("Suggestions")).toBeTruthy();
     expect(screen.getByText("Moderation")).toBeTruthy();
     expect(screen.queryByText("Users")).toBeNull();
   });

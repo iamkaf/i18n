@@ -35,6 +35,7 @@ async function makeRequest(
 
 beforeEach(() => {
   vi.clearAllMocks();
+  vi.unstubAllEnvs();
   mockDbRun.mockResolvedValue(undefined);
   mockDbAll.mockResolvedValue([]);
 });
@@ -116,6 +117,18 @@ describe("PATCH /api/users/[discordId]", () => {
       body: JSON.stringify({ role: "user" }),
     });
     const res = await PATCH(req, { params: Promise.resolve({ discordId: "517599684961894400" }) });
+    expect(res.status).toBe(409);
+  });
+
+  it("rejects assigning god to another Discord ID in development", async () => {
+    vi.stubEnv("NODE_ENV", "development");
+    const { PATCH } = await import("@/app/api/users/[discordId]/route");
+    const req = await makeRequest("http://localhost/api/users/123456789012345678", GOD_SESSION, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ role: "god" }),
+    });
+    const res = await PATCH(req, { params: Promise.resolve({ discordId: "123456789012345678" }) });
     expect(res.status).toBe(409);
   });
 });

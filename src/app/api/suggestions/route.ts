@@ -162,6 +162,8 @@ type SuggestionRow = {
   context: string | null;
   placeholder_sig: string;
   project_slug: string;
+  project_name: string;
+  project_icon_url: string | null;
   decision_note: string | null;
   decided_at: string | null;
   decided_by_discord_id: string | null;
@@ -227,7 +229,7 @@ export async function GET(req: Request) {
       sg.id, sg.locale, sg.text, sg.author_discord_id, sg.author_name,
       sg.status, sg.created_at, sg.decision_note, sg.decided_at, sg.decided_by_discord_id,
       ss.id as source_string_id, ss.string_key, ss.source_text, ss.context, ss.placeholder_sig,
-      p.slug as project_slug
+      p.slug as project_slug, p.name as project_name, p.icon_url as project_icon_url
     ${baseQuery}
     ORDER BY sg.created_at DESC
     LIMIT ? OFFSET ?`,
@@ -243,6 +245,8 @@ export async function GET(req: Request) {
     status: r.status,
     created_at: r.created_at,
     project_slug: r.project_slug,
+    project_name: r.project_name,
+    project_icon_url: r.project_icon_url,
     decision_note: r.decision_note,
     decided_at: r.decided_at,
     decided_by_discord_id: r.decided_by_discord_id,

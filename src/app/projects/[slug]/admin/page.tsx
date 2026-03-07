@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { sileo } from "sileo";
+import { toast } from "sonner";
 import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { PublicShell } from "@/components/atelier/public-shell";
@@ -204,9 +204,9 @@ export default function ProjectAdminPage() {
       });
       setProject(data.project);
       if (data.project.slug !== project.slug) router.replace(`/projects/${data.project.slug}/admin`);
-      sileo.success({ title: "Project updated", description: data.project.slug });
+      toast.success("Project updated", { description: data.project.slug });
     } catch (e) {
-      sileo.error({ title: "Failed", description: getErrorMessage(e) });
+      toast.error("Failed", { description: getErrorMessage(e) });
     } finally {
       setSavingProject(false);
     }
@@ -218,21 +218,21 @@ export default function ProjectAdminPage() {
     try {
       const result = await apiJson<ImportResult>(`/api/projects/${project.slug}/imports`, { method: "POST", body: JSON.stringify(payload) });
       setLastImport(result);
-      sileo.success({ title: result.locale === "en_us" ? "Source catalog imported" : `Imported ${result.locale}`, description: summarizeImport(result) });
+      toast.success(result.locale === "en_us" ? "Source catalog imported" : `Imported ${result.locale}`, { description: summarizeImport(result) });
       if (payload.source.type === "upload") { setUploadFile(null); setUploadLocale(""); }
     } catch (e) {
-      sileo.error({ title: "Import failed", description: getErrorMessage(e) });
+      toast.error("Import failed", { description: getErrorMessage(e) });
     } finally {
       setImportBusy(false);
     }
   }
 
   async function handleManualUpload() {
-    if (!uploadFile) { sileo.error({ title: "Choose a file" }); return; }
+    if (!uploadFile) { toast.error("Choose a file"); return; }
     const inferredLocale = inferLocaleFromFilename(uploadFile.name);
     const resolvedLocale = normalizeLocaleCode(uploadLocale || inferredLocale);
-    if (!isSupportedLocaleCode(resolvedLocale)) { sileo.error({ title: "Locale required" }); return; }
-    if (!project?.has_source_catalog && resolvedLocale !== "en_us") { sileo.error({ title: "Import en_us first" }); return; }
+    if (!isSupportedLocaleCode(resolvedLocale)) { toast.error("Locale required"); return; }
+    if (!project?.has_source_catalog && resolvedLocale !== "en_us") { toast.error("Import en_us first"); return; }
     await runImport({ locale: resolvedLocale, source: { type: "upload", file_name: uploadFile.name, content: await uploadFile.text() } });
   }
 
@@ -240,7 +240,7 @@ export default function ProjectAdminPage() {
     if (!project) return;
     const locale = normalizeLocaleCode(rawLocale);
     if (!isSupportedLocaleCode(locale)) {
-      sileo.error({ title: "Locale required", description: "Pick a valid locale code." });
+      toast.error("Locale required", { description: "Pick a valid locale code." });
       return;
     }
 
@@ -256,9 +256,9 @@ export default function ProjectAdminPage() {
       anchor.click();
       anchor.remove();
       URL.revokeObjectURL(blobUrl);
-      sileo.success({ title: `Downloaded ${locale}`, description: anchor.download });
+      toast.success(`Downloaded ${locale}`, { description: anchor.download });
     } catch (e) {
-      sileo.error({ title: "Download failed", description: getErrorMessage(e) });
+      toast.error("Download failed", { description: getErrorMessage(e) });
     } finally {
       setDownloadBusyLocale(null);
     }

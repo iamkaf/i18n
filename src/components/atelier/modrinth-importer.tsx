@@ -1,7 +1,8 @@
 "use client";
 
+import Image from "next/image";
 import Link from "next/link";
-import { sileo } from "sileo";
+import { toast } from "sonner";
 import { useEffect, useState } from "react";
 import { ApiError, apiJson, getErrorMessage } from "@/lib/api";
 import { Button } from "@/components/ui/button";
@@ -174,11 +175,12 @@ export function ModrinthImporter({ onImportSuccess }: ModrinthImporterProps) {
               </button>
             ))}
           </div>
-          <label className="block">
+          <label className="block" htmlFor="modrinth-import-query">
             <span className="mb-1.5 block text-xs uppercase tracking-[0.15em] text-[var(--atelier-muted)]">
               {mode === "author" ? "Modrinth username" : "Project slug, ID, or URL"}
             </span>
             <Input
+              id="modrinth-import-query"
               value={query}
               onChange={(event) => setQuery(event.target.value)}
               placeholder={mode === "author" ? "iamkaf" : "amber or https://modrinth.com/mod/amber"}
@@ -216,9 +218,11 @@ export function ModrinthImporter({ onImportSuccess }: ModrinthImporterProps) {
                 >
                   <div className="flex items-start gap-4">
                     {project.icon_url ? (
-                      <img
+                      <Image
                         src={project.icon_url}
-                        alt=""
+                        alt={`${project.title} icon`}
+                        width={56}
+                        height={56}
                         className="h-14 w-14 rounded-2xl border border-[var(--atelier-border)] object-cover"
                       />
                     ) : null}
@@ -293,23 +297,32 @@ export function ModrinthImporter({ onImportSuccess }: ModrinthImporterProps) {
                   </p>
                 </div>
 
-                <label className="block">
+                <label className="block" htmlFor="review-local-slug">
                   <span className="mb-1.5 block text-xs uppercase tracking-[0.15em] text-[var(--atelier-muted)]">
                     Local slug
                   </span>
-                  <Input value={reviewSlug} onChange={(event) => setReviewSlug(event.target.value)} />
+                  <Input
+                    id="review-local-slug"
+                    value={reviewSlug}
+                    onChange={(event) => setReviewSlug(event.target.value)}
+                  />
                 </label>
-                <label className="block">
+                <label className="block" htmlFor="review-local-name">
                   <span className="mb-1.5 block text-xs uppercase tracking-[0.15em] text-[var(--atelier-muted)]">
                     Local name
                   </span>
-                  <Input value={reviewName} onChange={(event) => setReviewName(event.target.value)} />
+                  <Input
+                    id="review-local-name"
+                    value={reviewName}
+                    onChange={(event) => setReviewName(event.target.value)}
+                  />
                 </label>
-                <label className="block">
+                <label className="block" htmlFor="review-visibility">
                   <span className="mb-1.5 block text-xs uppercase tracking-[0.15em] text-[var(--atelier-muted)]">
                     Visibility
                   </span>
                   <select
+                    id="review-visibility"
                     value={reviewVisibility}
                     onChange={(event) => setReviewVisibility(event.target.value as Visibility)}
                     className="atelier-ring h-9 w-full rounded-md border border-[var(--atelier-border)] bg-[var(--atelier-surface-soft)] px-3 text-sm"
@@ -318,11 +331,12 @@ export function ModrinthImporter({ onImportSuccess }: ModrinthImporterProps) {
                     <option value="public">public</option>
                   </select>
                 </label>
-                <label className="block">
+                <label className="block" htmlFor="review-github-repo-url">
                   <span className="mb-1.5 block text-xs uppercase tracking-[0.15em] text-[var(--atelier-muted)]">
                     GitHub repo URL
                   </span>
                   <Input
+                    id="review-github-repo-url"
                     value={reviewGithubRepoUrl}
                     onChange={(event) => setReviewGithubRepoUrl(event.target.value)}
                     placeholder="https://github.com/iamkaf/amber"
@@ -377,10 +391,7 @@ export function ModrinthImporter({ onImportSuccess }: ModrinthImporterProps) {
                       });
                       setLastImported(result.project);
                       setImportWarning(result.warning ?? null);
-                      sileo.success({
-                        title: result.action === "created" ? "Project imported" : "Project metadata updated",
-                        description: "Source and translation files are imported from the project page.",
-                      });
+                      toast.success(result.action === "created" ? "Project imported" : "Project metadata updated", { description: "Source and translation files are imported from the project page." });
                       onImportSuccess?.();
                       await runLookup(selectedProject.id);
                     } catch (error) {
@@ -389,7 +400,7 @@ export function ModrinthImporter({ onImportSuccess }: ModrinthImporterProps) {
                       if (error instanceof ApiError && error.status === 409) {
                         return;
                       }
-                      sileo.error({ title: "Import failed", description: message });
+                      toast.error("Import failed", { description: message });
                     } finally {
                       setImportBusy(false);
                     }

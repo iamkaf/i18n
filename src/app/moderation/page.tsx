@@ -1,7 +1,7 @@
 "use client";
 
 import { Check, X } from "lucide-react";
-import { sileo } from "sileo";
+import { toast } from "sonner";
 import { useEffect, useMemo, useState } from "react";
 import { AppShell } from "@/components/atelier/app-shell";
 import { ErrorStateCard } from "@/components/atelier/error-state-card";
@@ -29,6 +29,8 @@ type Suggestion = {
   status: "pending" | "accepted" | "rejected";
   created_at: string;
   project_slug: string;
+  project_name: string;
+  project_icon_url: string | null;
   decision_note: string | null;
   source_string: {
     id: string;
@@ -188,9 +190,24 @@ export default function ModerationPage() {
             <div className="space-y-6">
               {Array.from(grouped.entries()).map(([slug, items]) => (
                 <section key={slug}>
-                  <h3 className="text-xs font-semibold uppercase tracking-wider text-[var(--atelier-muted)] mb-2">
-                    {slug}
-                  </h3>
+                  <div className="flex items-center gap-2 mb-2">
+                    <div className="w-6 h-6 shrink-0 rounded overflow-hidden border border-[var(--atelier-border)]">
+                      {items[0].project_icon_url ? (
+                        <img
+                          src={items[0].project_icon_url}
+                          alt={`${items[0].project_name} icon`}
+                          className="w-full h-full object-cover"
+                        />
+                      ) : (
+                        <div className="w-full h-full bg-gradient-to-tr from-[var(--atelier-highlight)] to-indigo-500 flex items-center justify-center text-white font-bold text-xs">
+                          {items[0].project_name.charAt(0)}
+                        </div>
+                      )}
+                    </div>
+                    <h3 className="text-xs font-semibold uppercase tracking-wider text-[var(--atelier-muted)]">
+                      {slug}
+                    </h3>
+                  </div>
                   <div className="bg-[var(--atelier-surface)] rounded-lg border border-[var(--atelier-border)] overflow-x-auto">
                     <table className="w-full text-sm">
                       <thead>
@@ -292,10 +309,7 @@ export default function ModerationPage() {
                     : { decision_note: decisionNote },
                 ),
               });
-              sileo.success({
-                title: decision.mode === "approve" ? "Suggestion approved" : "Suggestion rejected",
-                description: decision.suggestion.source_string.key,
-              });
+              toast.success(decision.mode === "approve" ? "Suggestion approved" : "Suggestion rejected", { description: decision.suggestion.source_string.key });
               setSuggestions((current) =>
                 current.filter((item) => item.id !== decision.suggestion.id),
               );

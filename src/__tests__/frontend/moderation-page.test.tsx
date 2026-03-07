@@ -21,8 +21,8 @@ vi.mock("@/components/atelier/app-shell", () => ({
   AppShell: ({ children }: any) => <div>{children}</div>,
 }));
 
-vi.mock("sileo", () => ({
-  sileo: {
+vi.mock("sonner", () => ({
+  toast: {
     success: (...args: unknown[]) => mockSuccess(...args),
     error: vi.fn(),
   },
@@ -51,6 +51,8 @@ describe("Moderation page", () => {
               status: "pending",
               created_at: "2026-01-01T00:00:00.000Z",
               project_slug: "demo-mod",
+              project_name: "Demo Mod",
+              project_icon_url: null,
               decision_note: null,
               source_string: {
                 id: "ss1",

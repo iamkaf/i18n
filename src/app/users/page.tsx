@@ -1,6 +1,7 @@
 "use client";
 
-import { sileo } from "sileo";
+import Image from "next/image";
+import { toast } from "sonner";
 import { useEffect, useState } from "react";
 import { AppShell } from "@/components/atelier/app-shell";
 import { EmptyStateCard } from "@/components/atelier/empty-state-card";
@@ -41,7 +42,6 @@ export default function UsersPage() {
   const [displayName, setDisplayName] = useState("");
   const [discordHandle, setDiscordHandle] = useState("");
   const [newRole, setNewRole] = useState<UserRole>("trusted");
-  
   const [showGrantRole, setShowGrantRole] = useState(false);
 
   async function loadUsers() {
@@ -96,41 +96,45 @@ export default function UsersPage() {
                 Grant role
               </h3>
             <div className="grid gap-3 md:grid-cols-[minmax(0,1.4fr)_minmax(0,1.15fr)_minmax(0,1fr)_160px_120px]">
-              <label className="block">
+              <label className="block" htmlFor="grant-role-discord-id">
                 <span className="mb-1.5 block text-xs uppercase tracking-[0.15em] text-[var(--atelier-muted)]">
                   Discord ID
                 </span>
                 <Input
+                  id="grant-role-discord-id"
                   value={discordId}
                   onChange={(event) => setDiscordId(event.target.value)}
                   placeholder="517599684961894400"
                 />
               </label>
-              <label className="block">
+              <label className="block" htmlFor="grant-role-display-name">
                 <span className="mb-1.5 block text-xs uppercase tracking-[0.15em] text-[var(--atelier-muted)]">
                   Display name
                 </span>
                 <Input
+                  id="grant-role-display-name"
                   value={displayName}
                   onChange={(event) => setDisplayName(event.target.value)}
                   placeholder="Optional label"
                 />
               </label>
-              <label className="block">
+              <label className="block" htmlFor="grant-role-handle">
                 <span className="mb-1.5 block text-xs uppercase tracking-[0.15em] text-[var(--atelier-muted)]">
                   Handle
                 </span>
                 <Input
+                  id="grant-role-handle"
                   value={discordHandle}
                   onChange={(event) => setDiscordHandle(event.target.value)}
                   placeholder="kaf"
                 />
               </label>
-              <label className="block">
+              <label className="block" htmlFor="grant-role-select">
                 <span className="mb-1.5 block text-xs uppercase tracking-[0.15em] text-[var(--atelier-muted)]">
                   Role
                 </span>
                 <select
+                  id="grant-role-select"
                   value={newRole}
                   onChange={(event) => setNewRole(event.target.value as UserRole)}
                   className="atelier-ring h-9 w-full rounded-md border border-[var(--atelier-border)] bg-[var(--atelier-surface-soft)] px-3 text-sm"
@@ -154,17 +158,14 @@ export default function UsersPage() {
                           role: newRole,
                         }),
                       });
-                      sileo.success({ title: "Role updated", description: discordId.trim() });
+                       toast.success("Role updated", { description: discordId.trim() });
                       setDiscordId("");
                       setDisplayName("");
                       setDiscordHandle("");
                       setNewRole("trusted");
                       await loadUsers();
                     } catch (saveError) {
-                      sileo.error({
-                        title: "Update failed",
-                        description: getErrorMessage(saveError),
-                      });
+                       toast.error("Update failed", { description: getErrorMessage(saveError) });
                     } finally {
                       setSavingId(null);
                     }
@@ -229,9 +230,11 @@ export default function UsersPage() {
                   <article key={entry.discord_id} className="px-4 py-3 border-b border-[var(--atelier-border)] last:border-0 flex items-center justify-between gap-3">
                      <div className="flex items-center gap-3 flex-1 min-w-0">
                         {avatarUrl ? (
-                          <img
+                          <Image
                             src={avatarUrl}
-                            alt={`${displayName}`}
+                            alt={`${displayName} avatar`}
+                            width={36}
+                            height={36}
                             className="h-9 w-9 rounded-full border border-[var(--atelier-border)] object-cover shrink-0"
                           />
                         ) : (
@@ -292,13 +295,10 @@ export default function UsersPage() {
                                        role: current.role,
                                      }),
                                    });
-                                   sileo.success({ title: "Updated", description: entry.discord_id });
+                                    toast.success("Updated", { description: entry.discord_id });
                                    await loadUsers();
                                  } catch (saveError) {
-                                   sileo.error({
-                                     title: "Update failed",
-                                     description: getErrorMessage(saveError),
-                                   });
+                                    toast.error("Update failed", { description: getErrorMessage(saveError) });
                                  } finally {
                                    setSavingId(null);
                                  }
@@ -319,13 +319,10 @@ export default function UsersPage() {
                                  setSavingId(entry.discord_id);
                                  try {
                                    await apiJson(`/api/users/${entry.discord_id}`, { method: "DELETE" });
-                                   sileo.success({ title: "Removed", description: entry.discord_id });
+                                    toast.success("Removed", { description: entry.discord_id });
                                    await loadUsers();
                                  } catch (saveError) {
-                                   sileo.error({
-                                     title: "Demotion failed",
-                                     description: getErrorMessage(saveError),
-                                   });
+                                    toast.error("Demotion failed", { description: getErrorMessage(saveError) });
                                  } finally {
                                    setSavingId(null);
                                  }

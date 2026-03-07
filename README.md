@@ -127,13 +127,6 @@ Run Next.js dev server:
 npm run dev
 ```
 
-Local localhost-only auth helpers exist for development:
-
-- `GET /api/dev/login?...` — create a local signed session cookie
-- `GET /api/dev/promote?...` — promote the current local session
-
-These routes are blocked outside `NODE_ENV=development` and non-localhost hosts.
-
 Preview on the Cloudflare runtime locally (OpenNext + Wrangler):
 
 ```bash

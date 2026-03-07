@@ -1,13 +1,13 @@
 // @vitest-environment jsdom
 
-import { render, screen, waitFor } from "@testing-library/react";
-import { describe, expect, it, vi } from "vitest";
+import { cleanup, render, screen, waitFor } from "@testing-library/react";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import UsersPage from "@/app/users/page";
 
 const mockUseSession = vi.fn();
 
-vi.mock("sileo", () => ({
-  sileo: {
+vi.mock("sonner", () => ({
+  toast: {
     success: vi.fn(),
     error: vi.fn(),
   },
@@ -22,6 +22,10 @@ vi.mock("@/components/atelier/app-shell", () => ({
 }));
 
 describe("UsersPage", () => {
+  afterEach(() => {
+    cleanup();
+  });
+
   it("shows a lock state when signed out", () => {
     mockUseSession.mockReturnValue({
       user: null,
@@ -76,14 +80,10 @@ describe("UsersPage", () => {
     await waitFor(() => {
       expect(screen.getByText("517599684961894400")).toBeTruthy();
       expect(screen.getByText("Kaf")).toBeTruthy();
-      expect(screen.getByText("Handle: @kaf")).toBeTruthy();
+      expect(screen.getByText(/@kaf/)).toBeTruthy();
     });
 
-    expect(screen.getByRole("img")).toBeTruthy();
-
-    expect(
-      screen.getByText("This account is bound to the hardcoded god Discord ID and cannot be edited or demoted here."),
-    ).toBeTruthy();
+    expect(screen.getByAltText("Kaf avatar")).toBeTruthy();
     expect(screen.queryByRole("button", { name: "Update" })).toBeNull();
   });
 });

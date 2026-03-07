@@ -22,11 +22,10 @@ vi.mock("next/link", () => ({
 vi.mock("next/navigation", () => ({
   useParams: () => ({ slug: "amber" }),
   useRouter: () => ({ replace: mockReplace }),
-  useSearchParams: () => new URLSearchParams(searchParamsValue),
 }));
 
-vi.mock("sileo", () => ({
-  sileo: {
+vi.mock("sonner", () => ({
+  toast: {
     success: vi.fn(),
     error: vi.fn(),
   },
@@ -49,12 +48,22 @@ vi.mock("@/components/atelier/public-shell", () => ({
 }));
 
 describe("Project page", () => {
+  function renderProjectPage() {
+    window.history.replaceState(
+      {},
+      "",
+      searchParamsValue ? `/projects/amber?${searchParamsValue}` : "/projects/amber",
+    );
+    render(<ProjectPage />);
+  }
+
   afterEach(() => {
     cleanup();
     mockApiJson.mockReset();
     mockUseSession.mockReset();
     mockReplace.mockReset();
     searchParamsValue = "";
+    window.history.replaceState({}, "", "/");
     window.sessionStorage.clear();
   });
 
@@ -62,7 +71,7 @@ describe("Project page", () => {
     mockUseSession.mockReturnValue({ user: null, god: false });
     mockApiJson.mockRejectedValueOnce(new ApiError(401, "Unauthorized", { error: "Unauthorized" }));
 
-    render(<ProjectPage />);
+    renderProjectPage();
 
     await waitFor(() => {
       expect(screen.getByText("Private project. Sign in with Discord to access.")).toBeTruthy();
@@ -88,7 +97,7 @@ describe("Project page", () => {
       },
     });
 
-    render(<ProjectPage />);
+    renderProjectPage();
 
     await waitFor(() => {
       expect(screen.getByText("No source catalog")).toBeTruthy();
@@ -150,7 +159,7 @@ describe("Project page", () => {
     });
 
     const user = userEvent.setup();
-    render(<ProjectPage />);
+    renderProjectPage();
 
     await screen.findByText("menu.title");
     await user.click(screen.getByText("menu.title"));
@@ -245,7 +254,7 @@ describe("Project page", () => {
     });
 
     const user = userEvent.setup();
-    render(<ProjectPage />);
+    renderProjectPage();
 
     await screen.findByTitle("Your suggestion was accepted");
     await screen.findByTitle("Your suggestion was rejected");
@@ -315,7 +324,7 @@ describe("Project page", () => {
     });
 
     const user = userEvent.setup();
-    render(<ProjectPage />);
+    renderProjectPage();
 
     await screen.findByText("menu.title");
     await user.type(screen.getByPlaceholderText("Search strings…"), "subtitle");
@@ -408,7 +417,7 @@ describe("Project page", () => {
       });
 
       const user = userEvent.setup();
-      render(<ProjectPage />);
+      renderProjectPage();
 
       await screen.findByText("menu.title");
       await user.click(screen.getByText("menu.title"));
@@ -426,7 +435,7 @@ describe("Project page", () => {
       await waitFor(() => {
         expect(scrollIntoViewMock).toHaveBeenCalled();
       });
-      expect(screen.getByText("menu.title")).toBeTruthy();
+      expect(screen.getAllByText("menu.title").length).toBeGreaterThan(0);
       expect(screen.queryByText("Select a string to start translating.")).toBeNull();
       expect(
         mockApiJson.mock.calls.filter(
@@ -510,12 +519,12 @@ describe("Project page", () => {
       throw new Error(`Unexpected apiJson call: ${input}`);
     });
 
-    render(<ProjectPage />);
+    renderProjectPage();
 
     await waitFor(() => {
       expect(screen.getByDisplayValue("subtitle")).toBeTruthy();
     });
-    expect(await screen.findByText("menu.subtitle")).toBeTruthy();
+    expect((await screen.findAllByText("menu.subtitle")).length).toBeGreaterThan(0);
     expect(screen.getByText("Mundo")).toBeTruthy();
     expect(
       mockApiJson.mock.calls.filter(

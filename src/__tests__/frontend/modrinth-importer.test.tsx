@@ -13,8 +13,8 @@ vi.mock("next/link", () => ({
   ),
 }));
 
-vi.mock("sileo", () => ({
-  sileo: {
+vi.mock("sonner", () => ({
+  toast: {
     success: vi.fn(),
     error: vi.fn(),
   },

@@ -1,6 +1,6 @@
 "use client";
 
-import { Toaster } from "sileo";
+import { Toaster } from "sonner";
 import { HotkeysProvider } from "@tanstack/react-hotkeys";
 import { ThemeProvider } from "@/components/theme-provider";
 

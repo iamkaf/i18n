@@ -1,6 +1,12 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { GOD_DISCORD_ID } from "@/lib/auth-constants";
-import { getSession, signSession, syncElevatedUserProfile, verifySession } from "@/lib/session";
+import {
+  getSession,
+  signSession,
+  syncElevatedUserProfile,
+  upsertUserRole,
+  verifySession,
+} from "@/lib/session";
 
 // Mock getEnv so session.ts can resolve SESSION_SECRET without Cloudflare context
 vi.mock("@/lib/cf", () => ({
@@ -24,6 +30,7 @@ const PAYLOAD = { sub: "123456789", name: "TestUser", handle: "test-user", avata
 
 beforeEach(() => {
   vi.clearAllMocks();
+  vi.unstubAllEnvs();
 });
 
 describe("signSession + verifySession", () => {
@@ -129,5 +136,20 @@ describe("syncElevatedUserProfile", () => {
       expect.stringContaining("avatar_url"),
       [GOD_DISCORD_ID, "Kaf", "iamkaf", "https://cdn.example/kaf.png", "god"],
     );
+  });
+});
+
+describe("upsertUserRole", () => {
+  it("rejects assigning god to a non-configured Discord ID in development", async () => {
+    vi.stubEnv("NODE_ENV", "development");
+
+    await expect(
+      upsertUserRole({
+        discordId: "123456789012345678",
+        displayName: "Not God",
+        role: "god",
+        addedByDiscordId: GOD_DISCORD_ID,
+      }),
+    ).rejects.toThrow("Only the configured Discord ID may hold the god role");
   });
 });

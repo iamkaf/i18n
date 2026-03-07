@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import Link from "next/link";
 import { useState } from "react";
 
@@ -28,11 +29,12 @@ function ProjectIcon({ project }: { project: Project }) {
     >
       <div className="w-12 h-12 sm:w-14 sm:h-14 rounded-xl overflow-hidden border border-[var(--atelier-border)] bg-[var(--atelier-surface)] transition-all duration-200 hover:border-[var(--atelier-highlight)] hover:scale-105 hover:shadow-md">
         {project.icon_url ? (
-          <img 
-            src={project.icon_url} 
-            alt="" 
+          <Image
+            src={project.icon_url}
+            alt={`${project.name} icon`}
+            width={56}
+            height={56}
             className="w-full h-full object-cover"
-            loading="lazy"
           />
         ) : (
           <div className="w-full h-full bg-gradient-to-tr from-[var(--atelier-highlight)] to-indigo-500 flex items-center justify-center text-white font-bold text-lg">
