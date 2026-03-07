@@ -78,7 +78,8 @@ describe("GET /api/projects/[slug]/strings", () => {
         source_text: "Hello",
         context: null,
         placeholder_sig: "",
-        approved_translation: "Bonjour",
+        approved_translation: "",
+        has_approved_translation: 1,
         my_suggestion_id: "s1",
         my_suggestion_locale: "fr_fr",
         my_suggestion_text: "Salut",
@@ -92,7 +93,28 @@ describe("GET /api/projects/[slug]/strings", () => {
     expect(res.status).toBe(200);
     const json = (await res.json()) as any;
     expect(json.strings[0].string_key).toBe("menu.title");
+    expect(json.strings[0].approved_translation).toBe("");
+    expect(json.strings[0].has_approved_translation).toBe(true);
     expect(json.strings[0].my_suggestion.text).toBe("Salut");
+    expect(mockDbAll).toHaveBeenCalledWith(
+      expect.stringContaining("LEFT JOIN translations tr"),
+      [
+        "fr_fr",
+        "123",
+        "fr_fr",
+        "123",
+        "fr_fr",
+        "123",
+        "fr_fr",
+        "123",
+        "fr_fr",
+        "123",
+        "fr_fr",
+        "p1",
+        100,
+        0,
+      ],
+    );
   });
 });
 

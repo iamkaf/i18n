@@ -19,6 +19,7 @@ type StringRow = {
   context: string | null;
   placeholder_sig: string;
   approved_translation: string | null;
+  has_approved_translation: number;
   my_suggestion_id: string | null;
   my_suggestion_locale: string | null;
   my_suggestion_text: string | null;
@@ -156,7 +157,8 @@ export async function GET(req: Request, { params }: { params: Promise<{ slug: st
        ss.source_text,
        ss.context,
        ss.placeholder_sig,
-       ${locale === "en_us" ? "ss.source_text" : "tr.text"} as approved_translation
+       ${locale === "en_us" ? "ss.source_text" : "tr.text"} as approved_translation,
+       ${locale === "en_us" ? "1" : "CASE WHEN tr.source_string_id IS NULL THEN 0 ELSE 1 END"} as has_approved_translation
        ${mineSql}
      FROM source_strings ss
      LEFT JOIN translations tr
@@ -166,7 +168,7 @@ export async function GET(req: Request, { params }: { params: Promise<{ slug: st
      WHERE ${whereSql}
      ORDER BY ss.string_key ASC
      LIMIT ? OFFSET ?`,
-    [locale, ...mineParams, ...args, limit, offset],
+    [...mineParams, locale, ...args, limit, offset],
   );
 
   return Response.json({
@@ -183,6 +185,7 @@ export async function GET(req: Request, { params }: { params: Promise<{ slug: st
       context: row.context,
       placeholder_sig: row.placeholder_sig,
       approved_translation: row.approved_translation,
+      has_approved_translation: Boolean(row.has_approved_translation),
       my_suggestion: row.my_suggestion_id
         ? {
             id: row.my_suggestion_id,

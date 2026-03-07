@@ -46,6 +46,7 @@ export default function ProjectsPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [showImporter, setShowImporter] = useState(false);
+  const [refreshKey, setRefreshKey] = useState(0);
 
   useEffect(() => {
     let alive = true;
@@ -66,7 +67,7 @@ export default function ProjectsPage() {
     }
     void run();
     return () => { alive = false; };
-  }, [deferredQuery]);
+  }, [deferredQuery, refreshKey]);
 
   return (
     <PublicShell>
@@ -95,7 +96,7 @@ export default function ProjectsPage() {
                   </DialogDescription>
                 </DialogHeader>
                 <div className="p-6 bg-[var(--atelier-bg)] relative z-0">
-                  <ModrinthImporter />
+                  <ModrinthImporter onImportSuccess={() => setRefreshKey((k) => k + 1)} />
                 </div>
               </DialogContent>
             </Dialog>

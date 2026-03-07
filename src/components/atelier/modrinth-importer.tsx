@@ -71,7 +71,11 @@ type ImportResponse = {
   warning?: string | null;
 };
 
-export function ModrinthImporter() {
+type ModrinthImporterProps = {
+  onImportSuccess?: () => void;
+};
+
+export function ModrinthImporter({ onImportSuccess }: ModrinthImporterProps) {
   const [mode, setMode] = useState<LookupMode>("author");
   const [query, setQuery] = useState("");
   const [projects, setProjects] = useState<LookupProject[]>([]);
@@ -377,6 +381,7 @@ export function ModrinthImporter() {
                         title: result.action === "created" ? "Project imported" : "Project metadata updated",
                         description: "Source and translation files are imported from the project page.",
                       });
+                      onImportSuccess?.();
                       await runLookup(selectedProject.id);
                     } catch (error) {
                       const message = getErrorMessage(error);

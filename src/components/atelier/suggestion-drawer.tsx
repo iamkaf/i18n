@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { DrawerPanel } from "@/components/atelier/drawer-panel";
-import { LocaleCombobox } from "@/components/atelier/locale-combobox";
+import { LocalePicker } from "@/components/atelier/locale-picker";
 import { getErrorMessage } from "@/lib/api";
 import { isSupportedLocaleCode } from "@/lib/locales";
 
@@ -91,10 +91,11 @@ export function SuggestionDrawer({
           <label className="mb-1.5 block text-xs uppercase tracking-[0.15em] text-[var(--atelier-muted)]">
             Locale
           </label>
-          <LocaleCombobox
+          <LocalePicker
             value={locale}
             onChange={setLocale}
-            placeholder="fr_fr"
+            placeholder="Select locale"
+            className="w-full justify-between"
           />
         </div>
         <div>

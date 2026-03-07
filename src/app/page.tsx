@@ -1,17 +1,53 @@
 "use client";
 
 import Link from "next/link";
+import { useEffect, useState } from "react";
 import { PublicShell } from "@/components/atelier/public-shell";
 import { useSession } from "@/lib/use-session";
 import { ChevronRight } from "lucide-react";
+import { GlobalStatsCard } from "@/components/atelier/global-stats-card";
+import { LanguageLeaderboard } from "@/components/atelier/language-leaderboard";
+import { Spinner } from "@/components/atelier/spinner";
+import { apiJson } from "@/lib/api";
+
+type GlobalStats = {
+  total_source_strings: number;
+  total_approved_translations: number;
+  locales: Array<{
+    locale: string;
+    approved_count: number;
+    coverage: number;
+  }>;
+};
 
 export default function Page() {
   const { user, loading } = useSession();
+  const [stats, setStats] = useState<GlobalStats | null>(null);
+  const [statsLoading, setStatsLoading] = useState(true);
+  const [statsError, setStatsError] = useState<string | null>(null);
+
+  useEffect(() => {
+    let alive = true;
+    async function fetchStats() {
+      setStatsLoading(true);
+      setStatsError(null);
+      try {
+        const data = await apiJson<{ ok: boolean; stats: GlobalStats }>("/api/stats");
+        if (alive) setStats(data.stats);
+      } catch (err) {
+        if (alive) setStatsError(err instanceof Error ? err.message : "Failed to load stats");
+      } finally {
+        if (alive) setStatsLoading(false);
+      }
+    }
+    void fetchStats();
+    return () => { alive = false; };
+  }, []);
 
   return (
     <PublicShell>
-      <div className="flex-1 flex flex-col items-center justify-center px-6 py-20 min-h-screen">
-        <div className="text-center w-full max-w-2xl mx-auto flex flex-col items-center justify-center opacity-0 translate-y-4 animate-[fadeInUp_1.2s_ease-out_forwards]">
+      <div className="flex-1 flex flex-col px-6 py-12 md:py-20">
+        <div className="text-center w-full max-w-2xl mx-auto flex flex-col items-center justify-center mb-16 opacity-0 translate-y-4 animate-[fadeInUp_1.2s_ease-out_forwards]">
           <h1 className="text-4xl md:text-5xl font-semibold tracking-tight text-[var(--atelier-text)] mb-4" style={{ fontFamily: "var(--font-syne)" }}>
             Hello.
           </h1>
@@ -44,6 +80,31 @@ export default function Page() {
               </a>
             )}
           </div>
+        </div>
+
+        <div className="w-full space-y-6 opacity-0 animate-[fadeIn_1s_ease-out_forwards_1s]">
+          {statsLoading ? (
+            <div className="flex justify-center py-8">
+              <Spinner />
+            </div>
+          ) : statsError ? (
+            <div className="w-full max-w-4xl mx-auto">
+              <div className="bg-[var(--atelier-surface)] rounded-lg border border-[var(--atelier-border)] p-8 text-center">
+                <p className="text-sm text-[var(--atelier-muted)]">Unable to load stats</p>
+              </div>
+            </div>
+          ) : stats ? (
+            <>
+              <GlobalStatsCard
+                totalSourceStrings={stats.total_source_strings}
+                totalApprovedTranslations={stats.total_approved_translations}
+              />
+              <LanguageLeaderboard
+                locales={stats.locales}
+                totalSourceStrings={stats.total_source_strings}
+              />
+            </>
+          ) : null}
         </div>
       </div>
     </PublicShell>

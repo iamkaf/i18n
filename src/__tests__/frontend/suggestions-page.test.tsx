@@ -79,12 +79,12 @@ describe("Suggestions page", () => {
     render(<SuggestionsPage />);
 
     await screen.findByText("Hello");
-    fireEvent.click(screen.getByText("Edit"));
+    fireEvent.click(screen.getByRole("button", { name: "Edit key.test" }));
     await screen.findByText("Withdraw suggestion");
     fireEvent.click(screen.getByText("Withdraw suggestion"));
 
     await waitFor(() => {
-      expect(screen.getByText("No suggestions in this slice")).toBeTruthy();
+      expect(screen.getByText("No suggestions match.")).toBeTruthy();
     });
     expect(screen.queryByText(/^target:/i)).toBeNull();
     expect(mockSuccess).toHaveBeenCalled();

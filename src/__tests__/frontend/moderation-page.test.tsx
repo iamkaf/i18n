@@ -76,8 +76,8 @@ describe("Moderation page", () => {
     render(<ModerationPage />);
 
     await screen.findByText("Hello");
-    fireEvent.click(screen.getAllByRole("button", { name: "Reject" })[0]);
-    fireEvent.click(screen.getAllByRole("button", { name: "Reject" })[1]);
+    fireEvent.click(screen.getByRole("button", { name: "Reject key.test" }));
+    fireEvent.click(screen.getByRole("button", { name: "Reject" }));
 
     await waitFor(() => {
       expect(screen.getByText("A rejection note is required.")).toBeTruthy();
@@ -86,10 +86,10 @@ describe("Moderation page", () => {
     fireEvent.change(screen.getByPlaceholderText("Explain why the suggestion is being rejected"), {
       target: { value: "Placeholder mismatch" },
     });
-    fireEvent.click(screen.getAllByRole("button", { name: "Reject" })[1]);
+    fireEvent.click(screen.getByRole("button", { name: "Reject" }));
 
     await waitFor(() => {
-      expect(screen.getByText("No suggestions in this queue")).toBeTruthy();
+      expect(screen.getByText("Queue is empty.")).toBeTruthy();
     });
     expect(screen.queryByText(/^target:/i)).toBeNull();
     expect(mockSuccess).toHaveBeenCalled();

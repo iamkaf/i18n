@@ -7,7 +7,7 @@ import { useParams, useRouter } from "next/navigation";
 import { PublicShell } from "@/components/atelier/public-shell";
 import { ErrorStateCard } from "@/components/atelier/error-state-card";
 import { LocaleBadge } from "@/components/atelier/locale-badge";
-import { LocaleCombobox } from "@/components/atelier/locale-combobox";
+import { LocalePicker } from "@/components/atelier/locale-picker";
 import { LockedStateCard } from "@/components/atelier/locked-state-card";
 import { SectionHeading } from "@/components/atelier/section-heading";
 import { Spinner } from "@/components/atelier/spinner";
@@ -225,7 +225,7 @@ export default function ProjectAdminPage() {
               </label>
             </div>
             <div className="mt-4 flex justify-end">
-              <Button onClick={() => void handleProjectSave()} disabled={savingProject}>{savingProject ? "Saving…" : "Save"}</Button>
+              <Button type="button" onClick={() => void handleProjectSave()} disabled={savingProject}>{savingProject ? "Saving…" : "Save"}</Button>
             </div>
           </section>
 
@@ -255,7 +255,7 @@ export default function ProjectAdminPage() {
                   {sourceFiles.length === 0 ? <p className="text-xs text-[var(--atelier-muted)]">No en_us.json found.</p> : sourceFiles.map((f) => (
                     <div key={f.path} className="mb-2 last:mb-0">
                       <div className="font-mono text-[11px] text-[var(--atelier-text)] truncate mb-1">{f.path}</div>
-                      <Button size="sm" variant="outline" className="w-full text-xs" onClick={() => void runImport({ locale: "en_us", source: { type: "github", path: f.path } })} disabled={importBusy}>
+                      <Button type="button" size="sm" variant="outline" className="w-full text-xs" onClick={() => void runImport({ locale: "en_us", source: { type: "github", path: f.path } })} disabled={importBusy}>
                         {project.has_source_catalog ? "Sync en_us" : "Import en_us"}
                       </Button>
                     </div>
@@ -268,7 +268,7 @@ export default function ProjectAdminPage() {
                   : translationFiles.map((f) => (
                     <div key={f.path} className="mb-2 last:mb-0">
                       <div className="font-mono text-[11px] text-[var(--atelier-text)] truncate mb-1"><LocaleBadge locale={f.locale} /> {f.path}</div>
-                      <Button size="sm" variant="outline" className="w-full text-xs" onClick={() => void runImport({ locale: f.locale, source: { type: "github", path: f.path } })} disabled={importBusy}>
+                      <Button type="button" size="sm" variant="outline" className="w-full text-xs" onClick={() => void runImport({ locale: f.locale, source: { type: "github", path: f.path } })} disabled={importBusy}>
                         Import {f.locale}
                       </Button>
                     </div>
@@ -283,8 +283,8 @@ export default function ProjectAdminPage() {
               <div className="grid gap-3 md:grid-cols-[1fr_140px_100px]">
                 <input type="file" accept=".json" onChange={(e) => { const f = e.target.files?.[0] ?? null; setUploadFile(f); setUploadLocale(f ? inferLocaleFromFilename(f.name) : ""); }}
                   className="block w-full text-xs file:mr-2 file:rounded file:border file:border-[var(--atelier-border)] file:bg-[var(--atelier-surface)] file:px-2 file:py-1 file:text-xs cursor-pointer" />
-                <LocaleCombobox value={uploadLocale} onChange={setUploadLocale} placeholder="Locale" allowEmpty />
-                <Button size="sm" onClick={() => void handleManualUpload()} disabled={importBusy}>{importBusy ? "…" : "Upload"}</Button>
+                <LocalePicker value={uploadLocale} onChange={setUploadLocale} placeholder="Locale" allowEmpty className="w-full justify-between" />
+                <Button size="sm" type="button" onClick={() => void handleManualUpload()} disabled={importBusy}>{importBusy ? "…" : "Upload"}</Button>
               </div>
             </div>
 

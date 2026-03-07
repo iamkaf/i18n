@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { sileo } from "sileo";
-import { useCallback, useDeferredValue, useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useParams, useSearchParams } from "next/navigation";
 import { PublicShell } from "@/components/atelier/public-shell";
 import { EmptyStateCard } from "@/components/atelier/empty-state-card";
@@ -18,7 +18,7 @@ import { ApiError, apiJson, getErrorMessage } from "@/lib/api";
 import { isSupportedLocaleCode, normalizeLocaleCode } from "@/lib/locales";
 import { useSession } from "@/lib/use-session";
 import { cn } from "@/lib/utils";
-import { Settings, ExternalLink, ChevronDown, Loader2 } from "lucide-react";
+import { Settings, ExternalLink } from "lucide-react";
 
 /* ------------------------------------------------------------------ */
 /*  Types                                                              */
@@ -60,6 +60,7 @@ type StringItem = {
   source_text: string;
   context: string | null;
   approved_translation: string | null;
+  has_approved_translation: boolean;
   my_suggestion: MySuggestion | null;
 };
 
@@ -71,20 +72,58 @@ type StringsResponse = {
   strings: StringItem[];
 };
 
+type ProjectPageNavigationState = {
+  locale?: string;
+  query?: string;
+  selectedId?: string | null;
+};
+
+const PROJECT_PAGE_NAV_PREFIX = "project-page-nav:";
+
+function getProjectPageNavigationKey(slug: string) {
+  return `${PROJECT_PAGE_NAV_PREFIX}${slug}`;
+}
+
+function readProjectPageNavigationState(slug: string): ProjectPageNavigationState | null {
+  if (typeof window === "undefined") return null;
+  try {
+    const raw = window.sessionStorage.getItem(getProjectPageNavigationKey(slug));
+    if (!raw) return null;
+    const parsed = JSON.parse(raw);
+    return parsed && typeof parsed === "object" ? (parsed as ProjectPageNavigationState) : null;
+  } catch {
+    return null;
+  }
+}
+
+function writeProjectPageNavigationState(slug: string, state: ProjectPageNavigationState) {
+  if (typeof window === "undefined") return;
+  window.sessionStorage.setItem(getProjectPageNavigationKey(slug), JSON.stringify(state));
+}
+
 /* ------------------------------------------------------------------ */
 /*  Status dot helper                                                  */
 /* ------------------------------------------------------------------ */
 
+function coverageColor(pct: number): string {
+  if (pct >= 80) return "text-emerald-600 dark:text-emerald-400";
+  if (pct >= 50) return "text-amber-600 dark:text-amber-400";
+  return "text-rose-600 dark:text-rose-400";
+}
+
 function StatusDot({ item }: { item: StringItem }) {
   if (item.my_suggestion?.status === "pending") {
-    // Half-filled: has draft
     return <span className="w-2 h-2 rounded-full border-2 border-amber-500 bg-amber-500/30 shrink-0" title="You have a pending draft" />;
   }
-  if (item.approved_translation) {
-    // Filled: approved translation exists
+  if (item.my_suggestion?.status === "accepted") {
+    return <span className="w-2 h-2 rounded-full border-2 border-emerald-500 bg-emerald-500/35 shrink-0" title="Your suggestion was accepted" />;
+  }
+  if (item.my_suggestion?.status === "rejected") {
+    return <span className="w-2 h-2 rounded-full border-2 border-rose-500 bg-rose-500/20 shrink-0" title="Your suggestion was rejected" />;
+  }
+  if (item.has_approved_translation) {
     return <span className="w-2 h-2 rounded-full bg-emerald-500 shrink-0" title="Has approved translation" />;
   }
-  // Empty: untranslated
   return <span className="w-2 h-2 rounded-full border-2 border-[var(--atelier-border)] shrink-0" title="Untranslated" />;
 }
 
@@ -105,24 +144,19 @@ export default function ProjectPage() {
   const [error, setError] = useState<string | null>(null);
 
   /* Filters */
-  const [query, setQuery] = useState(searchParams.get("q") || "");
-  const deferredQuery = useDeferredValue(query);
+  const [query, setQuery] = useState(searchParams.get("q") ?? "");
   const [locale, setLocale] = useState(() => {
-    const initial = normalizeLocaleCode(searchParams.get("locale") || "en_us");
+    const initial = normalizeLocaleCode(searchParams.get("locale") ?? "en_us");
     return isSupportedLocaleCode(initial) ? initial : "en_us";
   });
+  const [debouncedQuery, setDebouncedQuery] = useState(searchParams.get("q") ?? "");
 
-  /* Strings — infinite scroll */
+  /* Strings */
   const [strings, setStrings] = useState<StringItem[]>([]);
-  const [page, setPage] = useState(0);
-  const [total, setTotal] = useState(0);
   const [loadingStrings, setLoadingStrings] = useState(false);
-  const [loadingMore, setLoadingMore] = useState(false);
-  const hasMore = strings.length < total;
 
   /* Progress */
   const [progress, setProgress] = useState<ProgressItem[]>([]);
-  const [showProgress, setShowProgress] = useState(false);
 
   /* Selection + editor */
   const [selectedId, setSelectedId] = useState<string | null>(null);
@@ -131,13 +165,63 @@ export default function ProjectPage() {
   const [submitting, setSubmitting] = useState(false);
   const [editing, setEditing] = useState<MySuggestion | null>(null);
   const [refreshKey, setRefreshKey] = useState(0);
+  const [hasRestoredNavigation, setHasRestoredNavigation] = useState(false);
 
-  const selectedString = strings.find((s) => s.id === selectedId) ?? null;
-  const listRef = useRef<HTMLDivElement>(null);
+  const normalizedQuery = debouncedQuery.trim().toLowerCase();
+  const filteredStrings = useMemo(() => {
+    if (!normalizedQuery) return strings;
+    return strings.filter((item) => {
+      const approvedText = item.approved_translation ?? "";
+      const suggestionText = item.my_suggestion?.text ?? "";
+      return (
+        item.string_key.toLowerCase().includes(normalizedQuery) ||
+        item.source_text.toLowerCase().includes(normalizedQuery) ||
+        (item.context ?? "").toLowerCase().includes(normalizedQuery) ||
+        approvedText.toLowerCase().includes(normalizedQuery) ||
+        suggestionText.toLowerCase().includes(normalizedQuery)
+      );
+    });
+  }, [normalizedQuery, strings]);
+  const selectedString = filteredStrings.find((s) => s.id === selectedId) ?? null;
+  const isSourceLocale = locale === "en_us";
 
   /* Active locale progress */
   const activeProgress = progress.find((p) => p.locale === locale);
   const coveragePct = activeProgress ? Math.round(activeProgress.coverage * 100) : 0;
+
+  useEffect(() => {
+    const timeoutId = window.setTimeout(() => {
+      setDebouncedQuery(query);
+    }, 250);
+    return () => window.clearTimeout(timeoutId);
+  }, [query]);
+
+  useEffect(() => {
+    const savedNavigation = readProjectPageNavigationState(slug);
+    if (savedNavigation) {
+      if (!searchParams.get("locale")) {
+        const savedLocale = normalizeLocaleCode(savedNavigation.locale ?? "");
+        if (isSupportedLocaleCode(savedLocale)) setLocale(savedLocale);
+      }
+      if (!searchParams.get("q") && typeof savedNavigation.query === "string") {
+        setQuery(savedNavigation.query);
+        setDebouncedQuery(savedNavigation.query);
+      }
+      if (typeof savedNavigation.selectedId === "string" || savedNavigation.selectedId === null) {
+        setSelectedId(savedNavigation.selectedId ?? null);
+      }
+    }
+    setHasRestoredNavigation(true);
+  }, [searchParams, slug]);
+
+  useEffect(() => {
+    if (!hasRestoredNavigation) return;
+    writeProjectPageNavigationState(slug, {
+      locale,
+      query,
+      selectedId,
+    });
+  }, [hasRestoredNavigation, locale, query, selectedId, slug]);
 
   /* ---- Load project ---- */
   useEffect(() => {
@@ -162,30 +246,43 @@ export default function ProjectPage() {
     return () => { alive = false; };
   }, [slug, refreshKey]);
 
-  /* ---- Load strings (reset on filter change) ---- */
+  /* ---- Load strings for the selected locale ---- */
   useEffect(() => {
+    if (!hasRestoredNavigation) return;
     if (!project?.has_source_catalog) { setStrings([]); setProgress([]); return; }
     let alive = true;
     async function load() {
       setLoadingStrings(true);
-      setPage(0);
       const normalizedLocale = normalizeLocaleCode(locale);
       if (!isSupportedLocaleCode(normalizedLocale)) { setLoadingStrings(false); return; }
-      const p = new URLSearchParams({ locale: normalizedLocale, page: "0", limit: "50", include_mine: "1" });
-      if (deferredQuery.trim()) p.set("q", deferredQuery.trim());
       try {
-        const [prog, str] = await Promise.all([
+        const [prog, firstPage] = await Promise.all([
           apiJson<{ progress: ProgressItem[]; total_strings: number }>(`/api/projects/${slug}/progress`),
-          apiJson<StringsResponse>(`/api/projects/${slug}/strings?${p.toString()}`),
+          apiJson<StringsResponse>(`/api/projects/${slug}/strings?${new URLSearchParams({ locale: normalizedLocale, page: "0", limit: "250", include_mine: "1" }).toString()}`),
         ]);
         if (!alive) return;
+        const allStrings = [...(firstPage.strings ?? [])];
+        const totalStringsForLocale = firstPage.total ?? 0;
+        let nextPage = 1;
+        while (allStrings.length < totalStringsForLocale) {
+          const pageData = await apiJson<StringsResponse>(
+            `/api/projects/${slug}/strings?${new URLSearchParams({
+              locale: normalizedLocale,
+              page: String(nextPage),
+              limit: "250",
+              include_mine: "1",
+            }).toString()}`,
+          );
+          if (!alive) return;
+          allStrings.push(...(pageData.strings ?? []));
+          if (!pageData.strings?.length) break;
+          nextPage += 1;
+        }
         const totalStrings = prog.total_strings ?? 0;
         const nextProgress = prog.progress ?? [];
-        const hasActive = nextProgress.some((i) => i.locale === str.locale);
-        setProgress(hasActive ? nextProgress : [...nextProgress, { locale: str.locale, approved_count: str.locale === "en_us" ? totalStrings : 0, total_strings: totalStrings, coverage: str.locale === "en_us" && totalStrings > 0 ? 1 : 0 }]);
-        setStrings(str.strings ?? []);
-        setTotal(str.total);
-        setPage(0);
+        const hasActive = nextProgress.some((i) => i.locale === firstPage.locale);
+        setProgress(hasActive ? nextProgress : [...nextProgress, { locale: firstPage.locale, approved_count: firstPage.locale === "en_us" ? totalStrings : 0, total_strings: totalStrings, coverage: firstPage.locale === "en_us" && totalStrings > 0 ? 1 : 0 }]);
+        setStrings(allStrings);
       } catch (e) {
         if (!alive) return;
         if (e instanceof ApiError && e.status === 401) { setLocked(true); setStrings([]); }
@@ -196,27 +293,14 @@ export default function ProjectPage() {
     }
     void load();
     return () => { alive = false; };
-  }, [deferredQuery, locale, project?.has_source_catalog, refreshKey, slug]);
+  }, [hasRestoredNavigation, locale, project?.has_source_catalog, refreshKey, slug]);
 
-  /* ---- Load more (append) ---- */
-  const loadMore = useCallback(async () => {
-    if (!project?.has_source_catalog || loadingMore || !hasMore) return;
-    setLoadingMore(true);
-    const nextPage = page + 1;
-    const normalizedLocale = normalizeLocaleCode(locale);
-    const p = new URLSearchParams({ locale: normalizedLocale, page: String(nextPage), limit: "50", include_mine: "1" });
-    if (deferredQuery.trim()) p.set("q", deferredQuery.trim());
-    try {
-      const str = await apiJson<StringsResponse>(`/api/projects/${slug}/strings?${p.toString()}`);
-      setStrings((prev) => [...prev, ...(str.strings ?? [])]);
-      setTotal(str.total);
-      setPage(nextPage);
-    } catch {
-      /* silently fail */
-    } finally {
-      setLoadingMore(false);
-    }
-  }, [deferredQuery, hasMore, loadingMore, locale, page, project?.has_source_catalog, slug]);
+  useEffect(() => {
+    if (!selectedId) return;
+    if (loadingStrings) return;
+    if (filteredStrings.some((item) => item.id === selectedId)) return;
+    setSelectedId(null);
+  }, [filteredStrings, loadingStrings, selectedId]);
 
   /* ---- Sync composer text when selection changes ---- */
   useEffect(() => {
@@ -227,6 +311,11 @@ export default function ProjectPage() {
   }, [selectedString]);
 
   function refresh() { setRefreshKey((v) => v + 1); }
+
+  function handleLocaleChange(nextLocale: string) {
+    setLocale(nextLocale);
+    setSelectedId(null);
+  }
 
   /* ---- Submit suggestion ---- */
   async function handleSubmit() {
@@ -321,7 +410,7 @@ export default function ProjectPage() {
                 <div className="flex items-center gap-3 mb-4 flex-wrap">
                   <LocalePicker
                     value={locale}
-                    onChange={(v) => { setLocale(v); setSelectedId(null); }}
+                    onChange={handleLocaleChange}
                   />
                   <Input
                     value={query}
@@ -335,15 +424,12 @@ export default function ProjectPage() {
                         <div className="h-full rounded-full bg-[var(--atelier-highlight)] transition-all" style={{ width: `${coveragePct}%` }} />
                       </div>
                       <span>{coveragePct}%</span>
-                      <button type="button" onClick={() => setShowProgress(!showProgress)} className="hover:text-[var(--atelier-text)] transition-colors">
-                        <ChevronDown className={cn("w-3 h-3 transition-transform", showProgress && "rotate-180")} />
-                      </button>
                     </div>
                   )}
                 </div>
 
-                {/* ─── Expandable locale progress ─── */}
-                {showProgress && progress.length > 0 && (
+                {/* ─── Locale progress ─── */}
+                {progress.length > 0 && (
                   <div className="mb-4 flex flex-wrap gap-1.5">
                     {progress.map((p) => (
                       <button key={p.locale} type="button"
@@ -356,7 +442,9 @@ export default function ProjectPage() {
                         )}
                       >
                         <LocaleBadge locale={p.locale} />
-                        <span className="font-medium">{Math.round(p.coverage * 100)}%</span>
+                        <span className={cn("font-medium", coverageColor(Math.round(p.coverage * 100)))}>
+                          {Math.round(p.coverage * 100)}%
+                        </span>
                       </button>
                     ))}
                   </div>
@@ -368,12 +456,12 @@ export default function ProjectPage() {
                 {loadingStrings ? <Spinner /> : (
                   <div className="grid grid-cols-1 lg:grid-cols-[minmax(0,1fr)_minmax(22rem,1.1fr)] gap-4 items-start">
                     {/* ──────── LEFT: String list ──────── */}
-                    <div ref={listRef} className="bg-[var(--atelier-surface)] rounded-lg border border-[var(--atelier-border)] overflow-hidden max-h-[calc(100vh-14rem)] overflow-y-auto">
-                      {strings.length === 0 ? (
+                    <div className="bg-[var(--atelier-surface)] rounded-lg border border-[var(--atelier-border)] overflow-hidden max-h-[calc(100vh-14rem)] overflow-y-auto">
+                      {filteredStrings.length === 0 ? (
                         <div className="py-16 text-center text-sm text-[var(--atelier-muted)]">No strings match.</div>
                       ) : (
                         <>
-                          {strings.map((s) => (
+                          {filteredStrings.map((s) => (
                             <button
                               key={s.id}
                               type="button"
@@ -390,20 +478,6 @@ export default function ProjectPage() {
                               <span className="text-[var(--atelier-text)] truncate flex-1">{s.source_text}</span>
                             </button>
                           ))}
-
-                          {/* Load more */}
-                          {hasMore && (
-                            <div className="p-3 text-center border-t border-[var(--atelier-border)]">
-                              <button
-                                type="button"
-                                onClick={() => void loadMore()}
-                                disabled={loadingMore}
-                                className="text-xs font-medium text-[var(--atelier-highlight)] hover:underline disabled:opacity-50 inline-flex items-center gap-1.5"
-                              >
-                                {loadingMore ? <><Loader2 className="w-3 h-3 animate-spin" /> Loading…</> : `Load more (${strings.length} of ${total})`}
-                              </button>
-                            </div>
-                          )}
                         </>
                       )}
                     </div>
@@ -414,7 +488,7 @@ export default function ProjectPage() {
                         /* Empty state */
                         <div className="flex flex-col items-center justify-center py-16 text-center">
                           <div className="text-sm text-[var(--atelier-muted)]">
-                            {strings.length === 0 ? "No strings to display." : "Select a string to start translating."}
+                            {filteredStrings.length === 0 ? "No strings to display." : "Select a string to start translating."}
                           </div>
                         </div>
                       ) : (
@@ -440,53 +514,80 @@ export default function ProjectPage() {
                             </div>
                           )}
 
-                          {/* Approved translation */}
-                          <div>
-                            <div className="text-[11px] uppercase tracking-wider text-[var(--atelier-muted)] mb-1">
-                              Approved translation <span className="normal-case">({locale})</span>
+                          {isSourceLocale ? (
+                            <section
+                              aria-label="Translation locale picker"
+                              className="rounded-xl border border-[var(--atelier-highlight)]/20 bg-[var(--atelier-highlight)]/5 px-4 py-4"
+                            >
+                              <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                                <div>
+                                  <div className="text-[11px] uppercase tracking-wider text-[var(--atelier-highlight)] mb-1">
+                                    Translate this string
+                                  </div>
+                                  <p className="text-sm text-[var(--atelier-text)] leading-relaxed">
+                                    <code className="font-mono text-[13px]">en_us</code> is the source catalog. Pick a translation locale to review approved text or submit a suggestion.
+                                  </p>
+                                </div>
+                                <LocalePicker
+                                  value={locale}
+                                  onChange={handleLocaleChange}
+                                  className="w-full justify-between sm:w-auto sm:min-w-56"
+                                />
+                              </div>
+                            </section>
+                          ) : (
+                            <div>
+                              <div className="text-[11px] uppercase tracking-wider text-[var(--atelier-muted)] mb-1">
+                                Approved translation <span className="normal-case">({locale})</span>
+                              </div>
+                              {selectedString.has_approved_translation ? (
+                                <p className="text-sm text-[var(--atelier-text)] leading-relaxed bg-emerald-500/5 border border-emerald-500/15 rounded-md px-3 py-2">
+                                  {selectedString.approved_translation === "" ? (
+                                    <span className="italic text-[var(--atelier-muted)]">Empty string</span>
+                                  ) : (
+                                    selectedString.approved_translation
+                                  )}
+                                </p>
+                              ) : (
+                                <p className="text-xs text-[var(--atelier-muted)] italic">No approved translation yet.</p>
+                              )}
                             </div>
-                            {selectedString.approved_translation ? (
-                              <p className="text-sm text-[var(--atelier-text)] leading-relaxed bg-emerald-500/5 border border-emerald-500/15 rounded-md px-3 py-2">{selectedString.approved_translation}</p>
-                            ) : (
-                              <p className="text-xs text-[var(--atelier-muted)] italic">No approved translation yet.</p>
-                            )}
-                          </div>
+                          )}
 
-                          {/* Divider */}
-                          <div className="border-t border-[var(--atelier-border)]" />
+                          {(!user || !isSourceLocale) && <div className="border-t border-[var(--atelier-border)]" />}
 
                           {/* Composer / auth states */}
                           {!user ? (
                             <p className="text-sm text-[var(--atelier-muted)]">
                               <a href="/api/auth/discord" className="text-[var(--atelier-highlight)] hover:underline font-medium">Sign in with Discord</a> to contribute translations.
                             </p>
-                          ) : locale === "en_us" ? (
-                            <p className="text-xs text-[var(--atelier-muted)]">Source locale is read-only. Pick a translation locale above.</p>
-                          ) : selectedString.my_suggestion?.status === "pending" ? (
-                            <div>
-                              <div className="text-[11px] uppercase tracking-wider text-[var(--atelier-muted)] mb-1">Your pending draft</div>
-                              <div className="bg-amber-500/5 border border-amber-500/15 rounded-md px-3 py-2 text-sm text-[var(--atelier-text)] mb-3">
-                                {selectedString.my_suggestion.text}
+                          ) : isSourceLocale ? null : (
+                            selectedString.my_suggestion?.status === "pending" ? (
+                              <div>
+                                <div className="text-[11px] uppercase tracking-wider text-[var(--atelier-muted)] mb-1">Your pending draft</div>
+                                <div className="bg-amber-500/5 border border-amber-500/15 rounded-md px-3 py-2 text-sm text-[var(--atelier-text)] mb-3">
+                                  {selectedString.my_suggestion.text}
+                                </div>
+                                <Button size="sm" type="button" variant="outline" onClick={() => setEditing(selectedString.my_suggestion)}>Edit draft</Button>
                               </div>
-                              <Button size="sm" variant="outline" onClick={() => setEditing(selectedString.my_suggestion)}>Edit draft</Button>
-                            </div>
-                          ) : (
-                            <div>
-                              <div className="text-[11px] uppercase tracking-wider text-[var(--atelier-muted)] mb-1.5">Your suggestion</div>
-                              <textarea
-                                value={composerText}
-                                onChange={(e) => setComposerText(e.target.value)}
-                                rows={4}
-                                className="atelier-ring w-full rounded-md border border-[var(--atelier-border)] bg-[var(--atelier-bg)] px-3 py-2 text-sm outline-none resize-none"
-                                placeholder={`Translation for ${locale}…`}
-                              />
-                              {composerError && <p className="mt-1 text-xs text-rose-600 dark:text-rose-400">{composerError}</p>}
-                              <div className="mt-2 flex justify-end">
-                                <Button size="sm" onClick={() => void handleSubmit()} disabled={submitting}>
-                                  {submitting ? "Submitting…" : "Submit suggestion"}
-                                </Button>
+                            ) : (
+                              <div>
+                                <div className="text-[11px] uppercase tracking-wider text-[var(--atelier-muted)] mb-1.5">Your suggestion</div>
+                                <textarea
+                                  value={composerText}
+                                  onChange={(e) => setComposerText(e.target.value)}
+                                  rows={4}
+                                  className="atelier-ring w-full rounded-md border border-[var(--atelier-border)] bg-[var(--atelier-bg)] px-3 py-2 text-sm outline-none resize-none"
+                                  placeholder={`Translation for ${locale}…`}
+                                />
+                                {composerError && <p className="mt-1 text-xs text-rose-600 dark:text-rose-400">{composerError}</p>}
+                                <div className="mt-2 flex justify-end">
+                                  <Button size="sm" type="button" onClick={() => void handleSubmit()} disabled={submitting}>
+                                    {submitting ? "Submitting…" : "Submit suggestion"}
+                                  </Button>
+                                </div>
                               </div>
-                            </div>
+                            )
                           )}
                         </div>
                       )}
