@@ -71,7 +71,7 @@ export default function ProjectsPage() {
 
   return (
     <PublicShell>
-      <div className="max-w-5xl mx-auto w-full px-6 md:px-10 py-8">
+      <div className="max-w-6xl mx-auto w-full px-6 md:px-10 py-8">
         <SectionHeading title="Projects" />
 
         <FilterToolbar>

@@ -16,7 +16,7 @@ export function AppShell({
     <div className="flex h-screen overflow-hidden bg-[var(--atelier-bg)]">
       {/* Main Content Area */}
       <main className="flex-1 overflow-y-auto relative bg-[var(--atelier-bg)]">
-        <div className="max-w-5xl mx-auto w-full min-h-full px-6 md:px-10 lg:pl-[14rem] pt-8 pb-32 lg:pb-8">
+        <div className="max-w-6xl mx-auto w-full min-h-full px-6 md:px-10 lg:pl-[14rem] pt-8 pb-32 lg:pb-8">
           {children}
         </div>
       </main>

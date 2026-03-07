@@ -184,13 +184,13 @@ export default function ProjectAdminPage() {
     await runImport({ locale: resolvedLocale, source: { type: "upload", file_name: uploadFile.name, content: await uploadFile.text() } });
   }
 
-  if (sessionLoading || loadingProject) return <PublicShell><div className="max-w-4xl mx-auto w-full px-6 md:px-10 py-8"><Spinner /></div></PublicShell>;
-  if (!god) return <PublicShell><div className="max-w-4xl mx-auto w-full px-6 md:px-10 py-8"><LockedStateCard description="Admin access required." /></div></PublicShell>;
-  if (error || !project) return <PublicShell><div className="max-w-4xl mx-auto w-full px-6 md:px-10 py-8"><ErrorStateCard description={error ?? "Project not found."} /></div></PublicShell>;
+  if (sessionLoading || loadingProject) return <PublicShell><div className="max-w-6xl mx-auto w-full px-6 md:px-10 py-8"><Spinner /></div></PublicShell>;
+  if (!god) return <PublicShell><div className="max-w-6xl mx-auto w-full px-6 md:px-10 py-8"><LockedStateCard description="Admin access required." /></div></PublicShell>;
+  if (error || !project) return <PublicShell><div className="max-w-6xl mx-auto w-full px-6 md:px-10 py-8"><ErrorStateCard description={error ?? "Project not found."} /></div></PublicShell>;
 
   return (
     <PublicShell>
-      <div className="max-w-4xl mx-auto w-full px-6 md:px-10 py-8">
+      <div className="max-w-6xl mx-auto w-full px-6 md:px-10 py-8">
         <div className="mb-4">
           <Link href={`/projects/${project.slug}`} className="inline-flex items-center gap-1.5 text-xs text-[var(--atelier-muted)] hover:text-[var(--atelier-text)] transition-colors">
             <ArrowLeft className="w-3 h-3" />
