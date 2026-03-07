@@ -434,12 +434,8 @@ export default function ProjectPage() {
 
   return (
     <PublicShell>
-      <div className="max-w-5xl mx-auto w-full px-6 md:px-10 py-20 animate-[fadeInUp_0.8s_ease-out_forwards]">
-        <SectionHeading
-          eyebrow="Project workbench"
-          title={project?.name || slug}
-          description="Each project keeps one canonical en_us source catalog and approved locale translations layered on top."
-        />
+      <div className="max-w-5xl mx-auto w-full px-6 md:px-10 py-8">
+        <SectionHeading title={project?.name || slug} />
 
       {loadingProject ? (
         <section className="grid gap-4">
@@ -454,22 +450,22 @@ export default function ProjectPage() {
           description={error}
         />
       ) : project ? (
-        <div className="grid gap-6">
-          <section className="bg-[var(--atelier-surface)] rounded-2xl border border-[var(--atelier-border)] overflow-hidden shadow-sm backdrop-blur-xl p-6">
-            <div className="flex flex-wrap items-start justify-between gap-5">
-              <div className="flex items-start gap-4">
+        <div className="grid gap-4">
+          <section className="bg-[var(--atelier-surface)] rounded-lg border border-[var(--atelier-border)] overflow-hidden p-4">
+            <div className="flex flex-wrap items-start justify-between gap-4">
+              <div className="flex items-start gap-3">
                 {project.icon_url ? (
                   <img
                     src={project.icon_url}
                     alt=""
-                    className="h-20 w-20 rounded-2xl border border-[var(--atelier-border)] object-cover shadow-sm"
+                    className="h-14 w-14 rounded-lg border border-[var(--atelier-border)] object-cover"
                   />
                 ) : (
-                  <div className="h-20 w-20 rounded-2xl bg-gradient-to-tr from-[var(--atelier-highlight)] to-indigo-500 border border-[var(--atelier-border)] shadow-sm flex items-center justify-center text-white text-3xl font-bold font-syne">
+                  <div className="h-14 w-14 rounded-lg bg-gradient-to-tr from-[var(--atelier-highlight)] to-indigo-500 border border-[var(--atelier-border)] flex items-center justify-center text-white text-xl font-bold">
                      {project.name.charAt(0)}
                   </div>
                 )}
-                <div className="pt-1">
+                <div>
                   <div className="mb-2 flex flex-wrap items-center gap-2">
                     <StatusPill variant={project.visibility === "public" ? "public" : "private"}>
                       {project.visibility}
@@ -481,7 +477,7 @@ export default function ProjectPage() {
                       <LocaleBadge locale="en_us" />
                     </span>
                   </div>
-                  <h1 className="text-3xl font-semibold tracking-tight text-[var(--atelier-text)]">{project.name}</h1>
+                  <h1 className="text-xl font-semibold tracking-tight text-[var(--atelier-text)]">{project.name}</h1>
                   <p className="mt-1 text-sm text-[var(--atelier-muted)] font-mono">{project.slug}</p>
                 </div>
               </div>
@@ -506,7 +502,7 @@ export default function ProjectPage() {
           </section>
 
           {god ? (
-            <details className="group bg-[var(--atelier-surface)] rounded-2xl border border-[var(--atelier-border)] overflow-hidden shadow-sm backdrop-blur-xl">
+            <details className="group bg-[var(--atelier-surface)] rounded-lg border border-[var(--atelier-border)] overflow-hidden">
               <summary className="p-4 md:p-5 flex items-center justify-between cursor-pointer list-none select-none hover:bg-black/5 dark:hover:bg-white/5 transition-colors">
                  <div>
                     <h3 className="text-base font-semibold text-[var(--atelier-text)]">Project metadata</h3>
@@ -564,7 +560,7 @@ export default function ProjectPage() {
           ) : null}
 
           {god ? (
-            <details className="group bg-[var(--atelier-surface)] rounded-2xl border border-[var(--atelier-border)] overflow-hidden shadow-sm backdrop-blur-xl" open={!project.has_source_catalog}>
+            <details className="group bg-[var(--atelier-surface)] rounded-lg border border-[var(--atelier-border)] overflow-hidden" open={!project.has_source_catalog}>
               <summary className="p-4 md:p-5 flex items-center justify-between cursor-pointer list-none select-none hover:bg-black/5 dark:hover:bg-white/5 transition-colors">
                  <div>
                     <h3 className="text-base font-semibold text-[var(--atelier-text)]">Data Imports</h3>
@@ -767,32 +763,18 @@ export default function ProjectPage() {
           ) : (
             <>
               <FilterToolbar sticky>
-                <label className="block min-w-[180px] flex-1">
-                  <span className="mb-1.5 block text-xs uppercase tracking-[0.15em] text-[var(--atelier-muted)]">
-                    Locale
-                  </span>
-                  <LocaleCombobox
-                    value={locale}
-                    onChange={(nextLocale) => {
-                      setLocale(nextLocale);
-                      setPage(0);
-                    }}
-                    placeholder="zh_cn"
-                  />
-                </label>
-                <label className="block min-w-[260px] flex-[2]">
-                  <span className="mb-1.5 block text-xs uppercase tracking-[0.15em] text-[var(--atelier-muted)]">
-                    Search strings
-                  </span>
-                  <Input
-                    value={query}
-                    onChange={(event) => {
-                      setQuery(event.target.value);
-                      setPage(0);
-                    }}
-                    placeholder="Search by key or source text"
-                  />
-                </label>
+                <LocaleCombobox
+                  value={locale}
+                  onChange={(v) => { setLocale(v); setPage(0); }}
+                  placeholder="zh_cn"
+                  className="w-32"
+                />
+                <Input
+                  value={query}
+                  onChange={(e) => { setQuery(e.target.value); setPage(0); }}
+                  placeholder="Search strings…"
+                  className="flex-1 max-w-sm"
+                />
               </FilterToolbar>
 
               <section>

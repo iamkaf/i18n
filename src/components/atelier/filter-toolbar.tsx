@@ -12,16 +12,16 @@ export function FilterToolbar({
   contentClassName?: string;
 }) {
   return (
-    <section
+    <div
       className={cn(
-        "bg-[var(--atelier-surface-soft)]/50 backdrop-blur-xl border-y border-[var(--atelier-border)] px-6 py-4 -mx-6 md:-mx-10 mb-8",
-        sticky && "sticky top-0 z-20",
+        "mb-4",
+        sticky && "sticky top-0 z-20 bg-[var(--atelier-bg)]/90 backdrop-blur-md py-2 -mt-2",
         className,
       )}
     >
-      <div className={cn("flex flex-wrap items-end gap-3 max-w-5xl mx-auto", contentClassName)}>
+      <div className={cn("flex flex-wrap items-end gap-3", contentClassName)}>
         {children}
       </div>
-    </section>
+    </div>
   );
 }

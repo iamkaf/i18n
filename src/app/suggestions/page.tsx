@@ -1,9 +1,8 @@
 "use client";
 
 import { sileo } from "sileo";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { AppShell } from "@/components/atelier/app-shell";
-import { EmptyStateCard } from "@/components/atelier/empty-state-card";
 import { ErrorStateCard } from "@/components/atelier/error-state-card";
 import { FilterToolbar } from "@/components/atelier/filter-toolbar";
 import { Input } from "@/components/ui/input";
@@ -17,6 +16,7 @@ import { SuggestionDrawer } from "@/components/atelier/suggestion-drawer";
 import { ApiError, apiJson, getErrorMessage } from "@/lib/api";
 import { isSupportedLocaleCode } from "@/lib/locales";
 import { useSession } from "@/lib/use-session";
+import { cn } from "@/lib/utils";
 
 type Suggestion = {
   id: string;
@@ -97,162 +97,129 @@ export default function SuggestionsPage() {
     };
   }, [limit, locale, page, project, status, user]);
 
+  // Group suggestions by project_slug
+  const grouped = useMemo(() => {
+    const map = new Map<string, Suggestion[]>();
+    for (const s of suggestions) {
+      const arr = map.get(s.project_slug) ?? [];
+      arr.push(s);
+      map.set(s.project_slug, arr);
+    }
+    return map;
+  }, [suggestions]);
+
   return (
     <AppShell currentHref="/suggestions">
-      <SectionHeading
-        eyebrow="Contributor history"
-        title="My suggestions"
-        description="Track pending drafts, accepted translations, and rejection notes without leaving the atelier."
-      />
+      <SectionHeading title="My Suggestions" />
 
       {loading ? (
-        <div className="atelier-card h-40 animate-pulse" />
+        <div className="bg-[var(--atelier-surface)] rounded-lg border border-[var(--atelier-border)] overflow-hidden animate-pulse h-32" />
       ) : !user ? (
-        <LockedStateCard description="Sign in with Discord to review, edit, or withdraw your own suggestions." />
+        <LockedStateCard description="Sign in with Discord to view your suggestions." />
       ) : (
         <>
           <FilterToolbar>
-            <label className="block min-w-[150px]">
-              <span className="mb-1.5 block text-xs uppercase tracking-[0.15em] text-[var(--atelier-muted)]">
-                Status
-              </span>
-              <select
-                value={status}
-                onChange={(event) => {
-                  setStatus(event.target.value);
-                  setPage(0);
-                }}
-                className="atelier-ring h-9 w-full rounded-md border border-[var(--atelier-border)] bg-[var(--atelier-surface-soft)] px-3 text-sm"
-              >
-                <option value="pending">pending</option>
-                <option value="accepted">accepted</option>
-                <option value="rejected">rejected</option>
-                <option value="all">all</option>
-              </select>
-            </label>
-            <label className="block min-w-[140px]">
-              <span className="mb-1.5 block text-xs uppercase tracking-[0.15em] text-[var(--atelier-muted)]">
-                Locale
-              </span>
-              <LocaleCombobox
-                value={locale}
-                onChange={(nextLocale) => {
-                  setLocale(nextLocale);
-                  setPage(0);
-                }}
-                placeholder="fr_fr"
-                allowEmpty
-              />
-            </label>
-            <label className="block min-w-[180px] flex-1">
-              <span className="mb-1.5 block text-xs uppercase tracking-[0.15em] text-[var(--atelier-muted)]">
-                Project
-              </span>
-              <Input
-                value={project}
-                onChange={(event) => {
-                  setProject(event.target.value);
-                  setPage(0);
-                }}
-                placeholder="demo-mod"
-              />
-            </label>
+            <div className="flex items-center gap-2">
+              {(["pending", "accepted", "rejected", "all"] as const).map((s) => (
+                <button
+                  key={s}
+                  type="button"
+                  onClick={() => { setStatus(s); setPage(0); }}
+                  className={cn(
+                    "px-3 py-1.5 rounded-md text-xs font-medium capitalize transition-colors",
+                    status === s
+                      ? "bg-[var(--atelier-text)] text-[var(--atelier-bg)]"
+                      : "text-[var(--atelier-muted)] hover:text-[var(--atelier-text)] hover:bg-black/[0.04] dark:hover:bg-white/[0.06]"
+                  )}
+                >
+                  {s}
+                </button>
+              ))}
+            </div>
+            <LocaleCombobox
+              value={locale}
+              onChange={(v) => { setLocale(v); setPage(0); }}
+              placeholder="Locale"
+              allowEmpty
+              className="w-28"
+            />
+            <Input
+              value={project}
+              onChange={(e) => { setProject(e.target.value); setPage(0); }}
+              placeholder="Project"
+              className="max-w-[10rem]"
+            />
           </FilterToolbar>
 
           {busy ? (
-            <div className="bg-[var(--atelier-surface)] rounded-2xl border border-[var(--atelier-border)] overflow-hidden shadow-sm backdrop-blur-xl animate-pulse">
-               {Array.from({ length: 4 }, (_, i) => (
-                 <div key={i} className="p-4 border-b border-[var(--atelier-border)] last:border-0 flex flex-col gap-3">
-                    <div className="flex items-center justify-between">
-                       <div className="h-4 w-24 bg-black/5 dark:bg-white/5 rounded" />
-                       <div className="h-6 w-16 bg-black/5 dark:bg-white/5 rounded-full" />
-                    </div>
-                    <div className="h-5 w-3/4 bg-black/5 dark:bg-white/5 rounded" />
-                    <div className="h-10 w-full bg-black/5 dark:bg-white/5 rounded-xl" />
-                 </div>
-               ))}
+            <div className="space-y-3">
+              {Array.from({ length: 3 }, (_, i) => (
+                <div key={i} className="bg-[var(--atelier-surface)] rounded-lg border border-[var(--atelier-border)] p-3 animate-pulse h-20" />
+              ))}
             </div>
           ) : error ? (
             <ErrorStateCard description={error} />
           ) : suggestions.length === 0 ? (
-            <div className="flex flex-col items-center justify-center py-20 px-4 text-center">
-              <div className="w-16 h-16 mb-4 rounded-full bg-[var(--atelier-surface)] border border-[var(--atelier-border)] flex items-center justify-center text-[var(--atelier-muted)] opacity-50">
-                 <svg className="w-8 h-8" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M5 19a2 2 0 01-2-2V7a2 2 0 012-2h4l2 2h4a2 2 0 012 2v1M5 19h14a2 2 0 002-2v-5a2 2 0 00-2-2H9a2 2 0 00-2 2v5a2 2 0 01-2 2z" />
-                 </svg>
-              </div>
-              <h3 className="text-lg font-medium text-[var(--atelier-text)] mb-2">No suggestions in this slice</h3>
-              <p className="text-[15px] text-[var(--atelier-muted)] max-w-sm">Try another status or filter combination.</p>
+            <div className="py-12 text-center">
+              <p className="text-sm text-[var(--atelier-muted)]">No suggestions match.</p>
             </div>
           ) : (
-            <div className="grid gap-6">
-              <div className="bg-[var(--atelier-surface)] rounded-2xl border border-[var(--atelier-border)] overflow-hidden shadow-sm backdrop-blur-xl">
-                 {suggestions.map((suggestion) => (
-                   <article key={suggestion.id} className="p-5 border-b border-[var(--atelier-border)] last:border-0 relative">
-                     <div className="flex flex-wrap items-start justify-between gap-4 mb-3">
-                       <div className="flex-1">
-                         <div className="flex items-center gap-2 mb-1">
-                            <span className="font-mono text-[11px] uppercase tracking-wider text-[var(--atelier-highlight)] bg-[var(--atelier-highlight)]/10 px-2 py-0.5 rounded-md">
-                              {suggestion.source_string.key}
-                            </span>
-                            <span className="text-[12px] text-[var(--atelier-muted)]">
-                              <LocaleBadge locale={suggestion.locale} /> • {suggestion.project_slug}
-                            </span>
-                         </div>
-                         <h3 className="text-[16px] font-medium text-[var(--atelier-text)] leading-snug">
-                           {suggestion.source_string.source_text}
-                         </h3>
-                         {suggestion.source_string.context ? (
-                           <p className="mt-1 text-[13px] text-[var(--atelier-muted)]">
-                             {suggestion.source_string.context}
-                           </p>
-                         ) : null}
-                       </div>
-                       <div className="flex flex-col items-end gap-2 shrink-0">
-                         <StatusPill
-                           variant={
-                             suggestion.status === "rejected"
-                               ? "rejected"
-                               : suggestion.status === "accepted"
-                                 ? "approved"
-                                 : "pending"
-                           }
-                         >
-                           {suggestion.status}
-                         </StatusPill>
-                         {suggestion.status === "pending" ? (
-                           <button
-                             type="button"
-                             onClick={() => setEditing(suggestion)}
-                             className="text-[13px] font-medium text-[var(--atelier-highlight)] hover:underline"
-                           >
-                             Edit
-                           </button>
-                         ) : (
-                           <span className="text-[11px] text-[var(--atelier-muted)] uppercase tracking-wider">
-                             {new Date(suggestion.created_at).toLocaleDateString()}
-                           </span>
-                         )}
-                       </div>
-                     </div>
-                     
-                     <div className="bg-[var(--atelier-surface-soft)]/50 rounded-xl p-3 border border-[var(--atelier-border)]/50">
-                        <div className="flex gap-3 items-start">
-                           <div className="w-1.5 h-1.5 rounded-full bg-[var(--atelier-highlight)] mt-2 shrink-0 opacity-50" />
-                           <div className="text-[15px] text-[var(--atelier-text)] leading-relaxed">
-                             {suggestion.text}
-                           </div>
-                        </div>
-                        {suggestion.decision_note ? (
-                          <div className="mt-3 pt-3 border-t border-[var(--atelier-border)]/50 flex gap-2 text-[13px]">
-                             <strong className="text-[var(--atelier-text)] font-medium">Note:</strong>
-                             <span className="text-[var(--atelier-muted)]">{suggestion.decision_note}</span>
+            <div className="space-y-6">
+              {Array.from(grouped.entries()).map(([slug, items]) => (
+                <section key={slug}>
+                  <h3 className="text-xs font-semibold uppercase tracking-wider text-[var(--atelier-muted)] mb-2">{slug}</h3>
+                  <div className="bg-[var(--atelier-surface)] rounded-lg border border-[var(--atelier-border)] overflow-hidden">
+                    {items.map((suggestion) => (
+                      <article key={suggestion.id} className="px-4 py-3 border-b border-[var(--atelier-border)] last:border-0">
+                        <div className="flex items-start justify-between gap-3">
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center gap-2 mb-0.5">
+                              <span className="font-mono text-[11px] text-[var(--atelier-highlight)] bg-[var(--atelier-highlight)]/10 px-1.5 py-0.5 rounded">
+                                {suggestion.source_string.key}
+                              </span>
+                              <span className="text-[11px] text-[var(--atelier-muted)]">
+                                <LocaleBadge locale={suggestion.locale} />
+                              </span>
+                            </div>
+                            <p className="text-sm text-[var(--atelier-text)] leading-snug">
+                              {suggestion.source_string.source_text}
+                            </p>
                           </div>
-                        ) : null}
-                     </div>
-                   </article>
-                 ))}
-              </div>
+                          <div className="flex flex-col items-end gap-1 shrink-0">
+                            <StatusPill
+                              variant={
+                                suggestion.status === "rejected" ? "rejected"
+                                : suggestion.status === "accepted" ? "approved"
+                                : "pending"
+                              }
+                            >
+                              {suggestion.status}
+                            </StatusPill>
+                            {suggestion.status === "pending" && (
+                              <button
+                                type="button"
+                                onClick={() => setEditing(suggestion)}
+                                className="text-xs font-medium text-[var(--atelier-highlight)] hover:underline"
+                              >
+                                Edit
+                              </button>
+                            )}
+                          </div>
+                        </div>
+
+                        <div className="mt-2 bg-[var(--atelier-surface-soft)]/50 rounded-md p-2.5 border border-[var(--atelier-border)]/30 text-sm text-[var(--atelier-text)]">
+                          {suggestion.text}
+                        </div>
+                        {suggestion.decision_note && (
+                          <div className="mt-1.5 text-xs text-[var(--atelier-muted)]">
+                            <strong className="font-medium text-[var(--atelier-text)]">Note:</strong> {suggestion.decision_note}
+                          </div>
+                        )}
+                      </article>
+                    ))}
+                  </div>
+                </section>
+              ))}
               <PaginationControls page={page} limit={limit} total={total} onPageChange={setPage} />
             </div>
           )}
@@ -303,3 +270,4 @@ export default function SuggestionsPage() {
     </AppShell>
   );
 }
+

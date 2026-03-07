@@ -70,11 +70,7 @@ export default function UsersPage() {
 
   return (
     <AppShell currentHref="/users">
-      <SectionHeading
-        eyebrow="Identity"
-        title="Users"
-        description="Manage elevated roles by Discord ID. The god role is permanently reserved for one configured account."
-      />
+      <SectionHeading title="Users" />
 
       {loading ? (
         <div className="atelier-card h-40 animate-pulse" />
@@ -94,11 +90,11 @@ export default function UsersPage() {
           </div>
 
           {showGrantRole && (
-            <section className="bg-[var(--atelier-surface-soft)]/50 backdrop-blur-md rounded-2xl p-6 border border-[var(--atelier-border)]">
-              <h3 className="text-sm font-semibold uppercase tracking-[0.14em] text-[var(--atelier-muted)]">
+            <section className="bg-[var(--atelier-surface-soft)]/50 rounded-lg p-4 border border-[var(--atelier-border)]">
+              <h3 className="text-xs font-semibold uppercase tracking-wider text-[var(--atelier-muted)] mb-3">
                 Grant role
               </h3>
-            <div className="mt-4 grid gap-3 md:grid-cols-[minmax(0,1.4fr)_minmax(0,1.15fr)_minmax(0,1fr)_160px_120px]">
+            <div className="grid gap-3 md:grid-cols-[minmax(0,1.4fr)_minmax(0,1.15fr)_minmax(0,1fr)_160px_120px]">
               <label className="block">
                 <span className="mb-1.5 block text-xs uppercase tracking-[0.15em] text-[var(--atelier-muted)]">
                   Discord ID
@@ -181,26 +177,24 @@ export default function UsersPage() {
           </section>
           )}
 
-          <FilterToolbar contentClassName="flex flex-col md:flex-row md:items-center justify-between gap-4 w-full">
-            <div className="flex items-center gap-3 w-full md:w-auto flex-1 max-w-sm">
-              <Input
-                value={search}
-                onChange={(event) => setSearch(event.target.value)}
-                placeholder="Search by ID, name, or handle"
-                className="bg-[var(--atelier-surface-soft)]/50 backdrop-blur-md border-[var(--atelier-border)]/50 h-10 rounded-xl focus:bg-[var(--atelier-surface)] transition-colors placeholder:text-[var(--atelier-muted)]/50 w-full"
-              />
-            </div>
-            <div className="flex bg-[var(--atelier-surface-soft)] p-1 rounded-[1rem] border border-[var(--atelier-border)]/50 w-full md:w-auto overflow-x-auto">
+          <FilterToolbar>
+            <Input
+              value={search}
+              onChange={(event) => setSearch(event.target.value)}
+              placeholder="Search…"
+              className="max-w-xs"
+            />
+            <div className="flex items-center gap-2">
               {(["all", "god", "trusted"] as const).map((roleOption) => (
                 <button
                   key={roleOption}
                   type="button"
                   onClick={() => setRoleFilter(roleOption)}
                   className={cn(
-                    "px-5 py-2 rounded-[0.75rem] text-sm font-medium capitalize transition-all duration-200 outline-none flex-1 md:flex-none",
+                    "px-3 py-1.5 rounded-md text-xs font-medium capitalize transition-colors",
                     roleFilter === roleOption
-                      ? "bg-[var(--atelier-bg)] text-[var(--atelier-text)] shadow-sm ring-1 ring-black/5 dark:ring-white/10"
-                      : "text-[var(--atelier-muted)] hover:text-[var(--atelier-text)] hover:bg-[var(--atelier-surface)]/50"
+                      ? "bg-[var(--atelier-text)] text-[var(--atelier-bg)]"
+                      : "text-[var(--atelier-muted)] hover:text-[var(--atelier-text)] hover:bg-black/[0.04] dark:hover:bg-white/[0.06]"
                   )}
                 >
                   {roleOption}
@@ -210,13 +204,13 @@ export default function UsersPage() {
           </FilterToolbar>
 
           {busy ? (
-            <div className="bg-[var(--atelier-surface)] rounded-2xl border border-[var(--atelier-border)] overflow-hidden shadow-sm backdrop-blur-xl animate-pulse">
+            <div className="bg-[var(--atelier-surface)] rounded-lg border border-[var(--atelier-border)] overflow-hidden animate-pulse">
                {Array.from({ length: 3 }, (_, i) => (
-                 <div key={i} className="p-4 border-b border-[var(--atelier-border)] last:border-0 flex items-center gap-4">
-                    <div className="w-12 h-12 rounded-full bg-black/5 dark:bg-white/5" />
-                    <div className="flex-1 space-y-2">
-                       <div className="h-4 w-32 bg-black/5 dark:bg-white/5 rounded" />
-                       <div className="h-3 w-48 bg-black/5 dark:bg-white/5 rounded" />
+                 <div key={i} className="px-4 py-3 border-b border-[var(--atelier-border)] last:border-0 flex items-center gap-3">
+                    <div className="w-9 h-9 rounded-full bg-black/5 dark:bg-white/5" />
+                    <div className="flex-1 space-y-1.5">
+                       <div className="h-3.5 w-28 bg-black/5 dark:bg-white/5 rounded" />
+                       <div className="h-3 w-40 bg-black/5 dark:bg-white/5 rounded" />
                     </div>
                  </div>
                ))}
@@ -224,17 +218,11 @@ export default function UsersPage() {
           ) : error ? (
             <ErrorStateCard description={error} />
           ) : users.length === 0 ? (
-            <div className="flex flex-col items-center justify-center py-32 px-4 text-center">
-              <div className="w-16 h-16 mb-5 rounded-full bg-[var(--atelier-surface-soft)] border border-[var(--atelier-border)]/50 flex items-center justify-center text-[var(--atelier-muted)] opacity-80 shadow-sm backdrop-blur-md">
-                 <svg className="w-8 h-8" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1} d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" />
-                 </svg>
-              </div>
-              <h3 className="text-[17px] font-medium text-[var(--atelier-text)] mb-1.5">No elevated users</h3>
-              <p className="text-[14px] text-[var(--atelier-muted)] max-w-sm">No trusted or god users matched the current filters.</p>
+            <div className="py-12 text-center">
+              <p className="text-sm text-[var(--atelier-muted)]">No elevated users found.</p>
             </div>
           ) : (
-            <div className="bg-[var(--atelier-surface)] rounded-2xl border border-[var(--atelier-border)] overflow-hidden shadow-sm backdrop-blur-xl">
+            <div className="bg-[var(--atelier-surface)] rounded-lg border border-[var(--atelier-border)] overflow-hidden">
               {users.map((entry) => {
                 const isConfiguredGod = entry.discord_id === GOD_DISCORD_ID;
                 const isCurrentUser = user?.sub === entry.discord_id;
@@ -247,40 +235,30 @@ export default function UsersPage() {
                 const handleText = handle ? `@${handle}` : "not set";
 
                 return (
-                  <article key={entry.discord_id} className="p-4 border-b border-[var(--atelier-border)] last:border-0 flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
-                     <div className="flex items-center gap-4 flex-1">
+                  <article key={entry.discord_id} className="px-4 py-3 border-b border-[var(--atelier-border)] last:border-0 flex items-center justify-between gap-3">
+                     <div className="flex items-center gap-3 flex-1 min-w-0">
                         {avatarUrl ? (
                           <img
                             src={avatarUrl}
                             alt={`${displayName}`}
-                            className="h-12 w-12 rounded-full border border-[var(--atelier-border)] object-cover shadow-sm"
+                            className="h-9 w-9 rounded-full border border-[var(--atelier-border)] object-cover shrink-0"
                           />
                         ) : (
-                          <div className="flex h-12 w-12 items-center justify-center rounded-full border border-[var(--atelier-border)] bg-[var(--atelier-surface-soft)] text-lg font-semibold text-[var(--atelier-muted)] shadow-sm">
+                          <div className="flex h-9 w-9 items-center justify-center rounded-full border border-[var(--atelier-border)] bg-[var(--atelier-surface-soft)] text-sm font-semibold text-[var(--atelier-muted)] shrink-0">
                             {displayName.charAt(0).toUpperCase()}
                           </div>
                         )}
-                        <div>
-                           <h3 className="text-[16px] font-medium text-[var(--atelier-text)] flex items-center gap-2">
+                        <div className="min-w-0">
+                           <h3 className="text-sm font-medium text-[var(--atelier-text)] flex items-center gap-1.5 truncate">
                              {displayName}
-                             {isConfiguredGod && (
-                               <svg className="w-4 h-4 text-[var(--atelier-highlight)]" fill="currentColor" viewBox="0 0 24 24">
-                                  <path d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                               </svg>
-                             )}
                            </h3>
-                           <div className="text-[13px] text-[var(--atelier-muted)] mt-0.5 flex items-center gap-1.5">
-                             <span>{handleText}</span>
-                             <span>•</span>
-                             <span className="font-mono text-[11px] bg-[var(--atelier-surface-soft)] px-1.5 py-0.5 rounded border border-[var(--atelier-border)]">{entry.discord_id}</span>
-                           </div>
-                           <div className="text-[12px] text-[var(--atelier-muted)]/70 mt-1">
-                             {isConfiguredGod ? "Reserved god account" : `added ${entry.added_at ? new Date(entry.added_at).toLocaleDateString() : ""} by ${entry.added_by_discord_id || "system"}`}
-                           </div>
+                           <p className="text-xs text-[var(--atelier-muted)] truncate">
+                             {handleText} · <span className="font-mono text-[11px]">{entry.discord_id}</span>
+                           </p>
                         </div>
                      </div>
                      
-                     <div className="flex flex-col items-end gap-3 self-stretch md:self-auto w-full md:w-auto mt-2 md:mt-0 pt-3 border-t md:border-0 border-[var(--atelier-border)]">
+                     <div className="flex items-center gap-2 shrink-0">
                         <StatusPill variant={entry.role === "god" ? "god" : "trusted"}>
                           {entry.role}
                         </StatusPill>

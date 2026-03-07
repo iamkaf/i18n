@@ -10,7 +10,7 @@ export default function Page() {
         {/* Animated Hello Message */}
         <div className="text-center w-full max-w-2xl mx-auto flex flex-col items-center justify-center opacity-0 translate-y-4 animate-[fadeInUp_1.2s_ease-out_forwards]">
           
-          <h1 className="text-5xl md:text-7xl font-semibold tracking-tight text-[var(--atelier-text)] mb-6" style={{ fontFamily: "var(--font-syne)" }}>
+          <h1 className="text-4xl md:text-5xl font-semibold tracking-tight text-[var(--atelier-text)] mb-4" style={{ fontFamily: "var(--font-syne)" }}>
             Hello.
           </h1>
           
